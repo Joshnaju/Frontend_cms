@@ -38,72 +38,95 @@ function DoctorSidebar() {
   ];
 
   return (
-    <div
-      className="bg-light border-end position-relative"
+    <aside
+      className="bg-white border-end flex-shrink-0 position-relative"
       style={{
-        width: collapsed ? "60px" : "240px",
+        width: collapsed ? "0px" : "240px",
         minHeight: "calc(100vh - 56px)",
         transition: "width 0.3s ease",
       }}
     >
-      {/* Collapse Button */}
-      <button
-        type="button"
-        className="btn btn-light border-0 position-absolute"
-        style={{
-          right: "-18px",
-          top: "10px",
-          width: "36px",
-          height: "36px",
-          borderRadius: "50%",
-          zIndex: 10,
-        }}
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        {collapsed ? "▶" : "◀"}
-      </button>
+      {/* =========================
+          SIDEBAR CONTENT
+      ========================== */}
 
-      {/* Doctor Menu */}
       {!collapsed && (
-        <div className="p-3">
-          <h6 className="text-muted text-uppercase mb-3">🩺 Doctor Menu</h6>
+        <>
+          {/* Doctor Menu Header */}
+          <div className="p-3 border-bottom d-flex align-items-center justify-content-between">
+            <h6 className="mb-0 fw-bold">🩺 Doctor Menu</h6>
 
-          <div className="nav flex-column">
+            {/* Collapse button */}
+            <button
+              type="button"
+              className="btn btn-sm btn-light border"
+              onClick={() => setCollapsed(true)}
+              title="Hide menu"
+            >
+              ‹
+            </button>
+          </div>
+
+          {/* Menu Items */}
+          <nav className="nav nav-pills flex-column p-2 gap-1">
             {menuItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `nav-link ${
-                    isActive ? "active fw-bold text-primary" : "text-dark"
+                  `nav-link d-flex align-items-center ${
+                    isActive ? "text-white fw-bold" : "text-dark"
                   }`
                 }
+                style={({ isActive }) => ({
+                  backgroundColor: isActive ? "#1976A3" : "transparent",
+
+                  borderRadius: "6px",
+
+                  transition: "background-color 0.2s ease",
+                })}
               >
-                {item.icon} {item.label}
+                {/* Icon */}
+                <span
+                  className="me-3"
+                  style={{
+                    width: "24px",
+                    textAlign: "center",
+                  }}
+                >
+                  {item.icon}
+                </span>
+
+                {/* Label */}
+                <span>{item.label}</span>
               </NavLink>
             ))}
-          </div>
-        </div>
+          </nav>
+        </>
       )}
 
-      {/* Collapsed Menu */}
+      {/* =========================
+          COLLAPSED BUTTON
+      ========================== */}
+
       {collapsed && (
-        <div className="d-flex flex-column align-items-center pt-5">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `nav-link fs-5 mb-2 ${isActive ? "text-primary" : "text-dark"}`
-              }
-              title={item.label}
-            >
-              {item.icon}
-            </NavLink>
-          ))}
-        </div>
+        <button
+          type="button"
+          className="btn btn-light border position-fixed"
+          onClick={() => setCollapsed(false)}
+          title="Show menu"
+          style={{
+            left: "10px",
+            top: "70px",
+            width: "38px",
+            height: "38px",
+            zIndex: 1050,
+          }}
+        >
+          ☰
+        </button>
       )}
-    </div>
+    </aside>
   );
 }
 

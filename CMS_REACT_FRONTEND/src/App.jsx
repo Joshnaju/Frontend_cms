@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Layout from "./components/Layout";
 
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -12,7 +11,6 @@ import DoctorRoutes from "./routes/DoctorRoutes";
 function App() {
   const [user, setUser] = useState(null);
 
-  // Load user when application starts
   useEffect(() => {
     const access = localStorage.getItem("access");
 
@@ -37,18 +35,10 @@ function App() {
         <Route path="/" element={<Login setUser={setUser} />} />
         <Route path="/login" element={<Login setUser={setUser} />} />
 
-        {/* Common protected layout */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          {/* Common routes can come here */}
-        </Route>
+        {/* =========================
+            DOCTOR MODULE
+        ========================== */}
 
-        {/* Doctor routes */}
         <Route
           path="/doctor/*"
           element={
@@ -58,7 +48,10 @@ function App() {
           }
         />
 
-        {/* 404 */}
+        {/* =========================
+            404
+        ========================== */}
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

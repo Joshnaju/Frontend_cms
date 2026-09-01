@@ -49,7 +49,10 @@ function Navbar({ user, setUser }) {
   };
 
   return (
-    <nav className="navbar navbar-expand-lg bg-primary px-3">
+    <nav
+      className="navbar navbar-expand-lg px-3"
+      style={{ backgroundColor: "#1976A3" }}
+    >
       {/* Logo */}
       <button
         className="btn text-white fw-bold fs-5 d-flex align-items-center"
