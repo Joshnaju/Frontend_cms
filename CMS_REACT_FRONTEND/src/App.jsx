@@ -1,5 +1,7 @@
+import MedicineList from "./pages/MedicineList";
+
 function App() {
-  return <div className="text-danger">Loading!!!</div>;
+  return <MedicineList />;
 }
 
 export default App;
