@@ -462,11 +462,10 @@ function Appointments() {
                           {appointment.status === "COMPLETED" && (
                             <button
                               type="button"
-                              className="btn btn-sm btn-outline-primary"
+                              className="btn btn-sm btn-warning text-white"
                               onClick={() =>
-                                console.log(
-                                  "View consultation:",
-                                  appointment.id,
+                                navigate(
+                                  `/doctor/consultation/view/${appointment.id}`,
                                 )
                               }
                             >
