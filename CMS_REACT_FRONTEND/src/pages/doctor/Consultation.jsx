@@ -398,21 +398,13 @@ function Consultation() {
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-header bg-white">
           <h5 className="mb-0 fw-semibold">
-            <i className="bi bi-person-circle me-2"></i>
+            <i className="bi bi-person-circle me-2 text-primary"></i>
             Patient Information
           </h5>
         </div>
 
         <div className="card-body">
           <div className="row">
-            <div className="col-md-4 mb-3">
-              <label className="text-muted small">Patient Name</label>
-
-              <div className="fw-semibold">
-                {appointment?.patient_name || "-"}
-              </div>
-            </div>
-
             {/* PATIENT ID */}
 
             <div className="col-md-4 mb-3">
@@ -422,20 +414,70 @@ function Consultation() {
                 {appointment?.patient_id || "-"}
               </div>
             </div>
-
-            {/* TOKEN */}
-
             <div className="col-md-4 mb-3">
-              <label className="text-muted small">Token Number</label>
+              <label className="text-muted small">Patient Name</label>
 
               <div className="fw-semibold">
+                {appointment?.patient_name || "-"}
+              </div>
+            </div>
+
+            {/* TOKEN */}
+            <div className="col-md-4 mb-3">
+              <label className="text-muted small d-block">Token Number</label>
+
+              <span className="badge bg-secondary px-3 py-2 fs-6">
                 {appointment?.token_number || "-"}
+              </span>
+            </div>
+            {/* PATIENT AGE */}
+            <div className="col-md-4 mb-3">
+              <label className="text-muted small">Age</label>
+              <div className="fw-semibold">
+                {appointment?.patient_age || "-"}
+              </div>
+            </div>
+            {/* GENDER */}
+            <div className="col-md-4 mb-3">
+              <label className="text-muted small">Gender</label>
+              <div className="fw-semibold">
+                {appointment?.patient_gender || "-"}
+              </div>
+            </div>
+            {/* BLOOD GROUP */}
+            <div className="col-md-4 mb-3">
+              <label className="text-muted small">Blood Group</label>
+              <div className="fw-semibold">
+                {appointment?.patient_blood_group || "-"}
+              </div>
+            </div>
+            {/* PLACE */}
+            <div className="col-md-4 mb-3">
+              <label className="text-muted small">Place</label>
+              <div className="fw-semibold">
+                {appointment?.patient_place || "-"}
+              </div>
+            </div>
+
+            {/* MOBILE */}
+            <div className="col-md-4 mb-3">
+              <label className="text-muted small">Mobile Number</label>
+              <div className="fw-semibold">
+                {appointment?.patient_mobile || "-"}
+              </div>
+            </div>
+
+            {/* EMAIL */}
+            <div className="col-md-4 mb-3">
+              <label className="text-muted small">Email</label>
+              <div className="fw-semibold">
+                {appointment?.patient_email || "-"}
               </div>
             </div>
 
             {/* DATE */}
 
-            <div className="col-md-4">
+            <div className="col-md-4 mb-3">
               <label className="text-muted small">Appointment Date</label>
 
               <div className="fw-semibold">
@@ -476,7 +518,7 @@ function Consultation() {
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-header bg-white">
             <h5 className="mb-0 fw-semibold">
-              <i className="bi bi-clipboard2-pulse me-2"></i>
+              <i className="bi bi-clipboard2-pulse me-2 text-warning"></i>
               Consultation Details
             </h5>
           </div>
@@ -555,386 +597,400 @@ function Consultation() {
             PRESCRIPTION / LAB ORDER
         ================================================= */}
 
+        {/* PRESCRIPTIONS */}
+        {/* =================================================
+    PRESCRIPTION / LAB ORDER
+================================================= */}
+
+        {/* PRESCRIPTIONS */}
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-header bg-white">
             <h5 className="mb-0 fw-semibold">Prescriptions</h5>
           </div>
 
           <div className="card-body">
-            <div className="row g-3">
-              {/* PRESCRIPTION */}
+            {/* =================================================
+        MEDICINE
+    ================================================= */}
 
-              <div className="col-md-6">
-                <div className="border rounded p-4 h-100">
-                  <div className="d-flex align-items-center mb-3">
-                    <i className="bi bi-prescription2 fs-3 me-3 text-primary"></i>
+            <div className="card mb-4">
+              {/* Medicine Header */}
+              <div className="card-header">
+                <h5 className="mb-0">
+                  <i className="bi bi-prescription2 me-2 text-success-emphasis"></i>
+                  Medicine
+                </h5>
+              </div>
 
-                    <div>
-                      <h6 className="fw-semibold mb-1">Medicine</h6>
+              <div className="card-body">
+                {/* =================================================
+            INITIAL MEDICINE BUTTONS
+        ================================================= */}
 
-                      <small className="text-muted">
-                        Add medicines for the patient
-                      </small>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-outline-primary"
-                    onClick={() => setShowPrescription(!showPrescription)}
-                  >
-                    <i className="bi bi-plus-circle me-1"></i>
-                    Add Medicine
-                  </button>
-
-                  <div className="mt-3">
+                {!showPrescription && !showOtherMedicine && (
+                  <>
                     <button
                       type="button"
-                      className="btn btn-outline-primary"
-                      onClick={() => setShowOtherMedicine(true)}
+                      className="btn btn-primary"
+                      onClick={() => setShowPrescription(true)}
                     >
                       <i className="bi bi-plus-circle me-1"></i>
-                      Add medicine not available in pharmacy
+                      Add Medicine
                     </button>
-                  </div>
 
-                  {/* OTHER MEDICINE  */}
-                  {showOtherMedicine && (
-                    <div className="card mt-3 border">
-                      <div className="card-body">
-                        <h6 className="mb-3">
-                          Add Medicine Not Available in Pharmacy
-                        </h6>
-
-                        {/* Medicine Name */}
-                        <div className="mb-3">
-                          <label className="form-label">
-                            Medicine Name <span className="text-danger">*</span>
-                          </label>
-
-                          <input
-                            type="text"
-                            name="medicine_name"
-                            className={`form-control ${
-                              otherMedicineErrors.medicine_name
-                                ? "is-invalid"
-                                : ""
-                            }`}
-                            value={otherMedicineForm.medicine_name}
-                            onChange={handleOtherMedicineChange}
-                            placeholder="Enter medicine name"
-                          />
-
-                          {otherMedicineErrors.medicine_name && (
-                            <div className="invalid-feedback">
-                              {otherMedicineErrors.medicine_name}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="row">
-                          {/* Dosage */}
-                          <div className="col-md-4 mb-3">
-                            <label className="form-label">
-                              Dosage <span className="text-danger">*</span>
-                            </label>
-
-                            <input
-                              type="text"
-                              name="dosage"
-                              className={`form-control ${
-                                otherMedicineErrors.dosage ? "is-invalid" : ""
-                              }`}
-                              value={otherMedicineForm.dosage}
-                              onChange={handleOtherMedicineChange}
-                              placeholder="e.g. 500 mg"
-                            />
-
-                            {otherMedicineErrors.dosage && (
-                              <div className="invalid-feedback">
-                                {otherMedicineErrors.dosage}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Frequency */}
-                          <div className="col-md-4 mb-3">
-                            <label className="form-label">
-                              Frequency <span className="text-danger">*</span>
-                            </label>
-
-                            <input
-                              type="text"
-                              name="frequency"
-                              className={`form-control ${
-                                otherMedicineErrors.frequency
-                                  ? "is-invalid"
-                                  : ""
-                              }`}
-                              value={otherMedicineForm.frequency}
-                              onChange={handleOtherMedicineChange}
-                              placeholder="e.g. 1-0-1"
-                            />
-
-                            {otherMedicineErrors.frequency && (
-                              <div className="invalid-feedback">
-                                {otherMedicineErrors.frequency}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Duration */}
-                          <div className="col-md-4 mb-3">
-                            <label className="form-label">
-                              Duration <span className="text-danger">*</span>
-                            </label>
-
-                            <input
-                              type="text"
-                              name="duration"
-                              className={`form-control ${
-                                otherMedicineErrors.duration ? "is-invalid" : ""
-                              }`}
-                              value={otherMedicineForm.duration}
-                              onChange={handleOtherMedicineChange}
-                              placeholder="e.g. 5 days"
-                            />
-
-                            {otherMedicineErrors.duration && (
-                              <div className="invalid-feedback">
-                                {otherMedicineErrors.duration}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Instructions */}
-                        <div className="mb-3">
-                          <label className="form-label">Instructions</label>
-
-                          <textarea
-                            name="instructions"
-                            className="form-control"
-                            rows="2"
-                            value={otherMedicineForm.instructions}
-                            onChange={handleOtherMedicineChange}
-                            placeholder="e.g. Take after food"
-                          />
-                        </div>
-
-                        {/* Buttons */}
-                        <div className="d-flex gap-2">
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={handleAddOtherMedicine}
-                          >
-                            <i className="bi bi-plus-circle me-1"></i>
-                            Add Medicine
-                          </button>
-
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => {
-                              setShowOtherMedicine(false);
-                              setOtherMedicineErrors({});
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary"
+                        onClick={() => setShowOtherMedicine(true)}
+                      >
+                        <i className="bi bi-plus-circle me-1"></i>
+                        Add medicine not available in pharmacy
+                      </button>
                     </div>
-                  )}
-                  {/* MEDICINE FORM */}
+                  </>
+                )}
 
-                  {showPrescription && (
-                    <div className="border rounded p-3 mt-3 bg-light">
-                      <h6 className="fw-semibold mb-3">Add Medicine</h6>
+                {/* =================================================
+            MEDICINE NOT AVAILABLE IN PHARMACY
+        ================================================= */}
 
-                      {/* MEDICINE */}
+                {showOtherMedicine && (
+                  <div className="border rounded p-3 mt-3">
+                    <h6 className="mb-3">
+                      Add Medicine Not Available in Pharmacy
+                    </h6>
 
-                      <div className="mb-3">
-                        <label className="form-label fw-semibold">
-                          Medicine <span className="text-danger">*</span>
+                    {/* Medicine Name */}
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Medicine Name <span className="text-danger">*</span>
+                      </label>
+
+                      <input
+                        type="text"
+                        name="medicine_name"
+                        className={`form-control ${
+                          otherMedicineErrors.medicine_name ? "is-invalid" : ""
+                        }`}
+                        value={otherMedicineForm.medicine_name}
+                        onChange={handleOtherMedicineChange}
+                        placeholder="Enter medicine name"
+                      />
+
+                      {otherMedicineErrors.medicine_name && (
+                        <div className="invalid-feedback">
+                          {otherMedicineErrors.medicine_name}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Dosage / Frequency / Duration */}
+                    <div className="row">
+                      {/* Dosage */}
+                      <div className="col-md-4 mb-3">
+                        <label className="form-label">
+                          Dosage <span className="text-danger">*</span>
                         </label>
-
-                        <select
-                          className={`form-select ${
-                            medicineErrors.medicine ? "is-invalid" : ""
-                          }`}
-                          value={medicineForm.medicine}
-                          onChange={handleMedicineChange}
-                        >
-                          <option value="">Select Medicine</option>
-
-                          {medicines
-                            .filter((medicine) => medicine.is_active)
-                            .map((medicine) => (
-                              <option key={medicine.id} value={medicine.id}>
-                                {medicine.name}
-                                {medicine.strength
-                                  ? ` - ${medicine.strength}`
-                                  : ""}
-                              </option>
-                            ))}
-                        </select>
-
-                        {medicineErrors.medicine && (
-                          <div className="invalid-feedback">
-                            {medicineErrors.medicine}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* DOSAGE */}
-
-                      <div className="mb-3">
-                        <label className="form-label fw-semibold">Dosage</label>
 
                         <input
                           type="text"
+                          name="dosage"
                           className={`form-control ${
-                            medicineErrors.dosage ? "is-invalid" : ""
+                            otherMedicineErrors.dosage ? "is-invalid" : ""
                           }`}
-                          value={medicineForm.dosage}
-                          readOnly
-                          placeholder="Dosage"
+                          value={otherMedicineForm.dosage}
+                          onChange={handleOtherMedicineChange}
+                          placeholder="e.g. 500 mg"
                         />
 
-                        {medicineErrors.dosage && (
+                        {otherMedicineErrors.dosage && (
                           <div className="invalid-feedback">
-                            {medicineErrors.dosage}
+                            {otherMedicineErrors.dosage}
                           </div>
                         )}
                       </div>
 
-                      {/* FREQUENCY */}
-
-                      <div className="mb-3">
-                        <label className="form-label fw-semibold">
+                      {/* Frequency */}
+                      <div className="col-md-4 mb-3">
+                        <label className="form-label">
                           Frequency <span className="text-danger">*</span>
                         </label>
 
                         <input
                           type="text"
+                          name="frequency"
                           className={`form-control ${
-                            medicineErrors.frequency ? "is-invalid" : ""
+                            otherMedicineErrors.frequency ? "is-invalid" : ""
                           }`}
-                          placeholder="e.g. 1-1-1"
-                          value={medicineForm.frequency}
-                          onChange={(e) => {
-                            const value = e.target.value;
-
-                            setMedicineForm((prev) => ({
-                              ...prev,
-                              frequency: value,
-                            }));
-
-                            if (value.trim()) {
-                              setMedicineErrors((prev) => ({
-                                ...prev,
-                                frequency: "",
-                              }));
-                            }
-                          }}
+                          value={otherMedicineForm.frequency}
+                          onChange={handleOtherMedicineChange}
+                          placeholder="e.g. 1-0-1"
                         />
 
-                        {medicineErrors.frequency && (
+                        {otherMedicineErrors.frequency && (
                           <div className="invalid-feedback">
-                            {medicineErrors.frequency}
+                            {otherMedicineErrors.frequency}
                           </div>
                         )}
                       </div>
 
-                      {/* DURATION */}
-
-                      <div className="mb-3">
-                        <label className="form-label fw-semibold">
+                      {/* Duration */}
+                      <div className="col-md-4 mb-3">
+                        <label className="form-label">
                           Duration <span className="text-danger">*</span>
                         </label>
 
                         <input
                           type="text"
+                          name="duration"
                           className={`form-control ${
-                            medicineErrors.duration ? "is-invalid" : ""
+                            otherMedicineErrors.duration ? "is-invalid" : ""
                           }`}
-                          placeholder="e.g. 3 days"
-                          value={medicineForm.duration}
-                          onChange={(e) => {
-                            const value = e.target.value;
-
-                            setMedicineForm((prev) => ({
-                              ...prev,
-                              duration: value,
-                            }));
-
-                            if (value.trim()) {
-                              setMedicineErrors((prev) => ({
-                                ...prev,
-                                duration: "",
-                              }));
-                            }
-                          }}
+                          value={otherMedicineForm.duration}
+                          onChange={handleOtherMedicineChange}
+                          placeholder="e.g. 5 days"
                         />
 
-                        {medicineErrors.duration && (
+                        {otherMedicineErrors.duration && (
                           <div className="invalid-feedback">
-                            {medicineErrors.duration}
+                            {otherMedicineErrors.duration}
                           </div>
                         )}
                       </div>
-
-                      {/* INSTRUCTIONS */}
-
-                      <div className="mb-3">
-                        <label className="form-label fw-semibold">
-                          Instructions
-                        </label>
-
-                        <textarea
-                          className="form-control"
-                          rows="2"
-                          placeholder="e.g. Take after food"
-                          value={medicineForm.instructions}
-                          onChange={(e) =>
-                            setMedicineForm((prev) => ({
-                              ...prev,
-                              instructions: e.target.value,
-                            }))
-                          }
-                        ></textarea>
-                      </div>
-
-                      {/* ADD BUTTON */}
-
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={handleAddMedicine}
-                      >
-                        <i className="bi bi-plus-lg me-1"></i>
-                        Add Medicine
-                      </button>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {formData.medicine_prescriptions.length > 0 && (
-                <div className="mt-3">
-                  <h6 className="fw-semibold">Added Medicines</h6>
+                    {/* Instructions */}
+                    <div className="mb-3">
+                      <label className="form-label">Instructions</label>
 
-                  <div className="table-responsive">
-                    <table className="table table-sm table-bordered align-middle mb-0">
+                      <textarea
+                        name="instructions"
+                        className="form-control"
+                        rows="3"
+                        value={otherMedicineForm.instructions}
+                        onChange={handleOtherMedicineChange}
+                        placeholder="e.g. Take after food"
+                      />
+                    </div>
+
+                    {/* Buttons */}
+                    <button
+                      type="button"
+                      className="btn btn-primary me-2"
+                      onClick={handleAddOtherMedicine}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Add Medicine
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setShowOtherMedicine(false);
+                        setOtherMedicineErrors({});
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {/* =================================================
+            AVAILABLE MEDICINE FORM
+        ================================================= */}
+
+                {showPrescription && (
+                  <div className="border rounded p-3 mt-3">
+                    <h6 className="mb-3">Add Medicine</h6>
+
+                    {/* Medicine */}
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Medicine <span className="text-danger">*</span>
+                      </label>
+
+                      <select
+                        className={`form-select ${
+                          medicineErrors.medicine ? "is-invalid" : ""
+                        }`}
+                        value={medicineForm.medicine}
+                        onChange={handleMedicineChange}
+                      >
+                        <option value="">Select Medicine</option>
+
+                        {medicines
+                          .filter((medicine) => medicine.is_active)
+                          .map((medicine) => (
+                            <option key={medicine.id} value={medicine.id}>
+                              {medicine.name}
+                              {medicine.strength
+                                ? ` - ${medicine.strength}`
+                                : ""}
+                            </option>
+                          ))}
+                      </select>
+
+                      {medicineErrors.medicine && (
+                        <div className="invalid-feedback">
+                          {medicineErrors.medicine}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Dosage */}
+                    <div className="mb-3">
+                      <label className="form-label">Dosage</label>
+
+                      <input
+                        type="text"
+                        className={`form-control ${
+                          medicineErrors.dosage ? "is-invalid" : ""
+                        }`}
+                        value={medicineForm.dosage}
+                        readOnly
+                        placeholder="Dosage"
+                      />
+
+                      {medicineErrors.dosage && (
+                        <div className="invalid-feedback">
+                          {medicineErrors.dosage}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Frequency */}
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Frequency <span className="text-danger">*</span>
+                      </label>
+
+                      <input
+                        type="text"
+                        className={`form-control ${
+                          medicineErrors.frequency ? "is-invalid" : ""
+                        }`}
+                        placeholder="e.g. 1-1-1"
+                        value={medicineForm.frequency}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setMedicineForm((prev) => ({
+                            ...prev,
+                            frequency: value,
+                          }));
+
+                          if (value.trim()) {
+                            setMedicineErrors((prev) => ({
+                              ...prev,
+                              frequency: "",
+                            }));
+                          }
+                        }}
+                      />
+
+                      {medicineErrors.frequency && (
+                        <div className="invalid-feedback">
+                          {medicineErrors.frequency}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Duration */}
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Duration <span className="text-danger">*</span>
+                      </label>
+
+                      <input
+                        type="text"
+                        className={`form-control ${
+                          medicineErrors.duration ? "is-invalid" : ""
+                        }`}
+                        placeholder="e.g. 3 days"
+                        value={medicineForm.duration}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setMedicineForm((prev) => ({
+                            ...prev,
+                            duration: value,
+                          }));
+
+                          if (value.trim()) {
+                            setMedicineErrors((prev) => ({
+                              ...prev,
+                              duration: "",
+                            }));
+                          }
+                        }}
+                      />
+
+                      {medicineErrors.duration && (
+                        <div className="invalid-feedback">
+                          {medicineErrors.duration}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Instructions */}
+                    <div className="mb-3">
+                      <label className="form-label">Instructions</label>
+
+                      <textarea
+                        className="form-control"
+                        rows="3"
+                        placeholder="e.g. Take after food"
+                        value={medicineForm.instructions}
+                        onChange={(e) =>
+                          setMedicineForm((prev) => ({
+                            ...prev,
+                            instructions: e.target.value,
+                          }))
+                        }
+                      ></textarea>
+                    </div>
+
+                    {/* Buttons */}
+                    <button
+                      type="button"
+                      className="btn btn-primary me-2"
+                      onClick={handleAddMedicine}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Add Medicine
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setShowPrescription(false);
+                        setMedicineErrors({});
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {/* =================================================
+            ADDED MEDICINES
+        ================================================= */}
+
+                {formData.medicine_prescriptions.length > 0 && (
+                  <div className="table-responsive mt-4">
+                    <h6 className="fw-semibold mb-3">Added Medicines</h6>
+
+                    <table className="table table-bordered align-middle mb-0">
                       <thead className="table-light">
                         <tr>
                           <th>Medicine</th>
                           <th>Dosage</th>
                           <th>Frequency</th>
                           <th>Duration</th>
-                          <th></th>
+                          <th>Action</th>
                         </tr>
                       </thead>
 
@@ -979,287 +1035,308 @@ function Consultation() {
                       </tbody>
                     </table>
                   </div>
-                </div>
-              )}
-              {/* LAB ORDER */}
+                )}
+              </div>
+            </div>
 
-              <div className="card mb-4">
-                <div className="card-header">
-                  <h5 className="mb-0">
-                    <i className="bi bi-clipboard2-pulse me-2"></i>
-                    Lab Orders
-                  </h5>
-                </div>
+            {/* =================================================
+        LAB ORDERS
+    ================================================= */}
 
-                <div className="card-body">
-                  {/* Add Lab Test Button */}
-                  {!showLabOrder && !showOtherLabTest && (
-                    <>
+            <div className="card mb-4">
+              {/* Lab Header */}
+              <div className="card-header">
+                <h5 className="mb-0">
+                  <i className="bi bi-clipboard2-plus me-2 text-info-emphasis"></i>
+                  Lab Orders
+                </h5>
+              </div>
+
+              <div className="card-body">
+                {/* =================================================
+            INITIAL LAB BUTTONS
+        ================================================= */}
+
+                {!showLabOrder && !showOtherLabTest && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => setShowLabOrder(true)}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Add Lab Test
+                    </button>
+
+                    <div className="mt-3">
                       <button
                         type="button"
-                        className="btn btn-primary"
-                        onClick={() => setShowLabOrder(true)}
+                        className="btn btn-outline-primary"
+                        onClick={() => setShowOtherLabTest(true)}
                       >
                         <i className="bi bi-plus-circle me-1"></i>
-                        Add Lab Test
-                      </button>
-
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary"
-                          onClick={() => setShowOtherLabTest(true)}
-                        >
-                          <i className="bi bi-plus-circle me-1"></i>
-                          Add lab test not available in lab
-                        </button>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Available Lab Test Form */}
-                  {showLabOrder && (
-                    <div className="border rounded p-3 mt-3">
-                      <h6 className="mb-3">Add Lab Test</h6>
-
-                      <div className="mb-3">
-                        <label className="form-label">
-                          Lab Test <span className="text-danger">*</span>
-                        </label>
-
-                        <select
-                          className={`form-select ${
-                            labOrderErrors.lab_test ? "is-invalid" : ""
-                          }`}
-                          value={labOrderForm.lab_test}
-                          onChange={handleLabTestChange}
-                        >
-                          <option value="">Select Lab Test</option>
-
-                          {labTests
-                            .filter((test) => test.is_active)
-                            .map((test) => (
-                              <option key={test.id} value={test.id}>
-                                {test.name}
-                              </option>
-                            ))}
-                        </select>
-
-                        {labOrderErrors.lab_test && (
-                          <div className="invalid-feedback">
-                            {labOrderErrors.lab_test}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="form-label">Instructions</label>
-
-                        <textarea
-                          className="form-control"
-                          rows="3"
-                          value={labOrderForm.instructions}
-                          onChange={(e) =>
-                            setLabOrderForm((prev) => ({
-                              ...prev,
-                              instructions: e.target.value,
-                            }))
-                          }
-                          placeholder="Enter instructions"
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        className="btn btn-primary me-2"
-                        onClick={handleAddLabTest}
-                      >
-                        <i className="bi bi-plus-circle me-1"></i>
-                        Add Lab Test
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => {
-                          setShowLabOrder(false);
-                          setLabOrderErrors({});
-                        }}
-                      >
-                        Cancel
+                        Add lab test not available in lab
                       </button>
                     </div>
-                  )}
+                  </>
+                )}
 
-                  {/* Unavailable Lab Test Form */}
-                  {showOtherLabTest && (
-                    <div className="border rounded p-3 mt-3">
-                      <h6 className="mb-3">
-                        Add Lab Test Not Available in Lab
-                      </h6>
+                {/* =================================================
+            AVAILABLE LAB TEST FORM
+        ================================================= */}
 
-                      <div className="mb-3">
-                        <label className="form-label">
-                          Lab Test Name <span className="text-danger">*</span>
-                        </label>
+                {showLabOrder && (
+                  <div className="border rounded p-3 mt-3">
+                    <h6 className="mb-3">Add Lab Test</h6>
 
-                        <input
-                          type="text"
-                          name="lab_test_name"
-                          className={`form-control ${
-                            otherLabTestErrors.lab_test_name ? "is-invalid" : ""
-                          }`}
-                          value={otherLabTestForm.lab_test_name}
-                          onChange={(e) => {
-                            const { value } = e.target;
+                    {/* Lab Test */}
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Lab Test <span className="text-danger">*</span>
+                      </label>
 
-                            setOtherLabTestForm((prev) => ({
-                              ...prev,
-                              lab_test_name: value,
-                            }));
+                      <select
+                        className={`form-select ${
+                          labOrderErrors.lab_test ? "is-invalid" : ""
+                        }`}
+                        value={labOrderForm.lab_test}
+                        onChange={handleLabTestChange}
+                      >
+                        <option value="">Select Lab Test</option>
 
-                            if (
-                              otherLabTestErrors.lab_test_name &&
-                              value.trim()
-                            ) {
-                              setOtherLabTestErrors((prev) => ({
-                                ...prev,
-                                lab_test_name: "",
-                              }));
-                            }
-                          }}
-                          placeholder="Enter lab test name"
-                        />
+                        {labTests
+                          .filter((test) => test.is_active)
+                          .map((test) => (
+                            <option key={test.id} value={test.id}>
+                              {test.name}
+                            </option>
+                          ))}
+                      </select>
 
-                        {otherLabTestErrors.lab_test_name && (
-                          <div className="invalid-feedback">
-                            {otherLabTestErrors.lab_test_name}
-                          </div>
-                        )}
-                      </div>
+                      {labOrderErrors.lab_test && (
+                        <div className="invalid-feedback">
+                          {labOrderErrors.lab_test}
+                        </div>
+                      )}
+                    </div>
 
-                      <div className="mb-3">
-                        <label className="form-label">Instructions</label>
+                    {/* Instructions */}
+                    <div className="mb-3">
+                      <label className="form-label">Instructions</label>
 
-                        <textarea
-                          className="form-control"
-                          rows="3"
-                          value={otherLabTestForm.instructions}
-                          onChange={(e) =>
-                            setOtherLabTestForm((prev) => ({
-                              ...prev,
-                              instructions: e.target.value,
-                            }))
-                          }
-                          placeholder="Enter instructions"
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        className="btn btn-primary me-2"
-                        onClick={() => {
-                          const errors = {};
-
-                          if (!otherLabTestForm.lab_test_name.trim()) {
-                            errors.lab_test_name = "Lab test name is required.";
-                          }
-
-                          if (Object.keys(errors).length > 0) {
-                            setOtherLabTestErrors(errors);
-                            return;
-                          }
-
-                          const newLabOrder = {
-                            lab_test: null,
-                            lab_test_name: otherLabTestForm.lab_test_name,
-                            instructions: otherLabTestForm.instructions,
-                          };
-
-                          setFormData((prev) => ({
+                      <textarea
+                        className="form-control"
+                        rows="3"
+                        value={labOrderForm.instructions}
+                        onChange={(e) =>
+                          setLabOrderForm((prev) => ({
                             ...prev,
-                            lab_orders: [...prev.lab_orders, newLabOrder],
+                            instructions: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter instructions"
+                      />
+                    </div>
+
+                    {/* Buttons */}
+                    <button
+                      type="button"
+                      className="btn btn-primary me-2"
+                      onClick={handleAddLabTest}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Add Lab Test
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setShowLabOrder(false);
+                        setLabOrderErrors({});
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {/* =================================================
+            LAB TEST NOT AVAILABLE
+        ================================================= */}
+
+                {showOtherLabTest && (
+                  <div className="border rounded p-3 mt-3">
+                    <h6 className="mb-3">Add Lab Test Not Available in Lab</h6>
+
+                    {/* Lab Test Name */}
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Lab Test Name <span className="text-danger">*</span>
+                      </label>
+
+                      <input
+                        type="text"
+                        name="lab_test_name"
+                        className={`form-control ${
+                          otherLabTestErrors.lab_test_name ? "is-invalid" : ""
+                        }`}
+                        value={otherLabTestForm.lab_test_name}
+                        onChange={(e) => {
+                          const { value } = e.target;
+
+                          setOtherLabTestForm((prev) => ({
+                            ...prev,
+                            lab_test_name: value,
                           }));
 
-                          setOtherLabTestForm({
-                            lab_test_name: "",
-                            instructions: "",
-                          });
-
-                          setOtherLabTestErrors({});
-                          setShowOtherLabTest(false);
+                          if (
+                            otherLabTestErrors.lab_test_name &&
+                            value.trim()
+                          ) {
+                            setOtherLabTestErrors((prev) => ({
+                              ...prev,
+                              lab_test_name: "",
+                            }));
+                          }
                         }}
-                      >
-                        <i className="bi bi-plus-circle me-1"></i>
-                        Add Lab Test
-                      </button>
+                        placeholder="Enter lab test name"
+                      />
 
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => {
-                          setShowOtherLabTest(false);
-                          setOtherLabTestErrors({});
-                        }}
-                      >
-                        Cancel
-                      </button>
+                      {otherLabTestErrors.lab_test_name && (
+                        <div className="invalid-feedback">
+                          {otherLabTestErrors.lab_test_name}
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {/* Added Lab Tests Table */}
-                  {formData.lab_orders.length > 0 && (
-                    <div className="table-responsive mt-4">
-                      <table className="table table-bordered align-middle">
-                        <thead className="table-light">
-                          <tr>
-                            <th>Lab Test</th>
-                            <th>Instructions</th>
-                            <th>Action</th>
+                    {/* Instructions */}
+                    <div className="mb-3">
+                      <label className="form-label">Instructions</label>
+
+                      <textarea
+                        className="form-control"
+                        rows="3"
+                        value={otherLabTestForm.instructions}
+                        onChange={(e) =>
+                          setOtherLabTestForm((prev) => ({
+                            ...prev,
+                            instructions: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter instructions"
+                      />
+                    </div>
+
+                    {/* Buttons */}
+                    <button
+                      type="button"
+                      className="btn btn-primary me-2"
+                      onClick={() => {
+                        const errors = {};
+
+                        if (!otherLabTestForm.lab_test_name.trim()) {
+                          errors.lab_test_name = "Lab test name is required.";
+                        }
+
+                        if (Object.keys(errors).length > 0) {
+                          setOtherLabTestErrors(errors);
+                          return;
+                        }
+
+                        const newLabOrder = {
+                          lab_test: null,
+                          lab_test_name: otherLabTestForm.lab_test_name,
+                          instructions: otherLabTestForm.instructions,
+                        };
+
+                        setFormData((prev) => ({
+                          ...prev,
+                          lab_orders: [...prev.lab_orders, newLabOrder],
+                        }));
+
+                        setOtherLabTestForm({
+                          lab_test_name: "",
+                          instructions: "",
+                        });
+
+                        setOtherLabTestErrors({});
+                        setShowOtherLabTest(false);
+                      }}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Add Lab Test
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setShowOtherLabTest(false);
+                        setOtherLabTestErrors({});
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {/* =================================================
+            ADDED LAB TESTS
+        ================================================= */}
+
+                {formData.lab_orders.length > 0 && (
+                  <div className="table-responsive mt-4">
+                    <h6 className="fw-semibold mb-3">Added Lab Tests</h6>
+
+                    <table className="table table-bordered align-middle mb-0">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Lab Test</th>
+                          <th>Instructions</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {formData.lab_orders.map((labOrder, index) => (
+                          <tr key={index}>
+                            <td>
+                              {labOrder.lab_test
+                                ? labTests.find(
+                                    (test) => test.id === labOrder.lab_test,
+                                  )?.name || "Unknown Test"
+                                : labOrder.lab_test_name}
+                            </td>
+
+                            <td>{labOrder.instructions || "-"}</td>
+
+                            <td className="text-center">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    lab_orders: prev.lab_orders.filter(
+                                      (_, i) => i !== index,
+                                    ),
+                                  }));
+                                }}
+                              >
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            </td>
                           </tr>
-                        </thead>
-
-                        <tbody>
-                          {formData.lab_orders.map((labOrder, index) => (
-                            <tr key={index}>
-                              <td>
-                                {labOrder.lab_test
-                                  ? labTests.find(
-                                      (test) => test.id === labOrder.lab_test,
-                                    )?.name || "Unknown Test"
-                                  : labOrder.lab_test_name}
-                              </td>
-
-                              <td>{labOrder.instructions || "-"}</td>
-
-                              <td>
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => {
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      lab_orders: prev.lab_orders.filter(
-                                        (_, i) => i !== index,
-                                      ),
-                                    }));
-                                  }}
-                                >
-                                  <i className="bi bi-trash"></i>
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-
         {/* =================================================
             FORM ACTIONS
         ================================================= */}
