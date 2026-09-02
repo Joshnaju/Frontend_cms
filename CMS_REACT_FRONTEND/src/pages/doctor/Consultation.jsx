@@ -5,6 +5,7 @@ import {
   getAppointment,
 } from "../../services/doctorService";
 import { getMedicines } from "../../services/medicineService";
+import { getLabTests } from "../../services/labTestService";
 
 function Consultation() {
   const { appointmentId } = useParams();
@@ -29,6 +30,24 @@ function Consultation() {
   const [medicineErrors, setMedicineErrors] = useState({});
   const [otherMedicineErrors, setOtherMedicineErrors] = useState({});
 
+  const [labTests, setLabTests] = useState([]);
+  const [showLabOrder, setShowLabOrder] = useState(false);
+
+  const [labOrderForm, setLabOrderForm] = useState({
+    lab_test: "",
+    instructions: "",
+  });
+
+  const [showOtherLabTest, setShowOtherLabTest] = useState(false);
+
+  const [otherLabTestForm, setOtherLabTestForm] = useState({
+    lab_test_name: "",
+    instructions: "",
+  });
+
+  const [otherLabTestErrors, setOtherLabTestErrors] = useState({});
+
+  const [labOrderErrors, setLabOrderErrors] = useState({});
   const [formData, setFormData] = useState({
     symptoms: "",
     diagnosis: "",
@@ -45,10 +64,14 @@ function Consultation() {
     instructions: "",
   });
 
-  useEffect(() => {
-    fetchAppointment();
-    fetchMedicines();
-  }, [appointmentId]);
+  const fetchLabTests = async () => {
+    try {
+      const response = await getLabTests();
+      setLabTests(response.data);
+    } catch (error) {
+      console.error("Error loading lab tests:", error);
+    }
+  };
 
   const fetchMedicines = async () => {
     try {
@@ -229,6 +252,55 @@ function Consultation() {
     setShowOtherMedicine(false);
   };
 
+  // ADDED
+  const handleLabTestChange = (e) => {
+    const { value } = e.target;
+
+    setLabOrderForm((prev) => ({
+      ...prev,
+      lab_test: value,
+    }));
+
+    if (labOrderErrors.lab_test && value) {
+      setLabOrderErrors((prev) => ({
+        ...prev,
+        lab_test: "",
+      }));
+    }
+  };
+
+  // ADDED
+  const handleAddLabTest = () => {
+    const errors = {};
+
+    if (!labOrderForm.lab_test) {
+      errors.lab_test = "Lab test is required.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setLabOrderErrors(errors);
+      return;
+    }
+
+    const newLabOrder = {
+      lab_test: Number(labOrderForm.lab_test),
+      instructions: labOrderForm.instructions,
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      lab_orders: [...prev.lab_orders, newLabOrder],
+    }));
+
+    setLabOrderForm({
+      lab_test: "",
+      instructions: "",
+    });
+
+    setLabOrderErrors({});
+    setShowLabOrder(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -275,6 +347,12 @@ function Consultation() {
       setSaving(false); // ADDED
     }
   };
+
+  useEffect(() => {
+    fetchAppointment();
+    fetchMedicines();
+    fetchLabTests();
+  }, [appointmentId]);
 
   if (loading) {
     return (
@@ -905,30 +983,277 @@ function Consultation() {
               )}
               {/* LAB ORDER */}
 
-              <div className="col-md-6">
-                <div className="border rounded p-4 h-100">
-                  <div className="d-flex align-items-center mb-3">
-                    <i className="bi bi-clipboard2-data fs-3 me-3 text-primary"></i>
+              <div className="card mb-4">
+                <div className="card-header">
+                  <h5 className="mb-0">
+                    <i className="bi bi-clipboard2-pulse me-2"></i>
+                    Lab Orders
+                  </h5>
+                </div>
 
-                    <div>
-                      <h6 className="fw-semibold mb-1">Lab Order</h6>
+                <div className="card-body">
+                  {/* Add Lab Test Button */}
+                  {!showLabOrder && !showOtherLabTest && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => setShowLabOrder(true)}
+                      >
+                        <i className="bi bi-plus-circle me-1"></i>
+                        Add Lab Test
+                      </button>
 
-                      <small className="text-muted">
-                        Request laboratory tests
-                      </small>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          className="btn btn-outline-primary"
+                          onClick={() => setShowOtherLabTest(true)}
+                        >
+                          <i className="bi bi-plus-circle me-1"></i>
+                          Add lab test not available in lab
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Available Lab Test Form */}
+                  {showLabOrder && (
+                    <div className="border rounded p-3 mt-3">
+                      <h6 className="mb-3">Add Lab Test</h6>
+
+                      <div className="mb-3">
+                        <label className="form-label">
+                          Lab Test <span className="text-danger">*</span>
+                        </label>
+
+                        <select
+                          className={`form-select ${
+                            labOrderErrors.lab_test ? "is-invalid" : ""
+                          }`}
+                          value={labOrderForm.lab_test}
+                          onChange={handleLabTestChange}
+                        >
+                          <option value="">Select Lab Test</option>
+
+                          {labTests
+                            .filter((test) => test.is_active)
+                            .map((test) => (
+                              <option key={test.id} value={test.id}>
+                                {test.name}
+                              </option>
+                            ))}
+                        </select>
+
+                        {labOrderErrors.lab_test && (
+                          <div className="invalid-feedback">
+                            {labOrderErrors.lab_test}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mb-3">
+                        <label className="form-label">Instructions</label>
+
+                        <textarea
+                          className="form-control"
+                          rows="3"
+                          value={labOrderForm.instructions}
+                          onChange={(e) =>
+                            setLabOrderForm((prev) => ({
+                              ...prev,
+                              instructions: e.target.value,
+                            }))
+                          }
+                          placeholder="Enter instructions"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-primary me-2"
+                        onClick={handleAddLabTest}
+                      >
+                        <i className="bi bi-plus-circle me-1"></i>
+                        Add Lab Test
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          setShowLabOrder(false);
+                          setLabOrderErrors({});
+                        }}
+                      >
+                        Cancel
+                      </button>
                     </div>
-                  </div>
+                  )}
 
-                  <button
-                    type="button"
-                    className="btn btn-outline-primary"
-                    onClick={() =>
-                      console.log("Open lab order:", appointmentId)
-                    }
-                  >
-                    <i className="bi bi-plus-lg me-2"></i>
-                    Add Lab Order
-                  </button>
+                  {/* Unavailable Lab Test Form */}
+                  {showOtherLabTest && (
+                    <div className="border rounded p-3 mt-3">
+                      <h6 className="mb-3">
+                        Add Lab Test Not Available in Lab
+                      </h6>
+
+                      <div className="mb-3">
+                        <label className="form-label">
+                          Lab Test Name <span className="text-danger">*</span>
+                        </label>
+
+                        <input
+                          type="text"
+                          name="lab_test_name"
+                          className={`form-control ${
+                            otherLabTestErrors.lab_test_name ? "is-invalid" : ""
+                          }`}
+                          value={otherLabTestForm.lab_test_name}
+                          onChange={(e) => {
+                            const { value } = e.target;
+
+                            setOtherLabTestForm((prev) => ({
+                              ...prev,
+                              lab_test_name: value,
+                            }));
+
+                            if (
+                              otherLabTestErrors.lab_test_name &&
+                              value.trim()
+                            ) {
+                              setOtherLabTestErrors((prev) => ({
+                                ...prev,
+                                lab_test_name: "",
+                              }));
+                            }
+                          }}
+                          placeholder="Enter lab test name"
+                        />
+
+                        {otherLabTestErrors.lab_test_name && (
+                          <div className="invalid-feedback">
+                            {otherLabTestErrors.lab_test_name}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mb-3">
+                        <label className="form-label">Instructions</label>
+
+                        <textarea
+                          className="form-control"
+                          rows="3"
+                          value={otherLabTestForm.instructions}
+                          onChange={(e) =>
+                            setOtherLabTestForm((prev) => ({
+                              ...prev,
+                              instructions: e.target.value,
+                            }))
+                          }
+                          placeholder="Enter instructions"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-primary me-2"
+                        onClick={() => {
+                          const errors = {};
+
+                          if (!otherLabTestForm.lab_test_name.trim()) {
+                            errors.lab_test_name = "Lab test name is required.";
+                          }
+
+                          if (Object.keys(errors).length > 0) {
+                            setOtherLabTestErrors(errors);
+                            return;
+                          }
+
+                          const newLabOrder = {
+                            lab_test: null,
+                            lab_test_name: otherLabTestForm.lab_test_name,
+                            instructions: otherLabTestForm.instructions,
+                          };
+
+                          setFormData((prev) => ({
+                            ...prev,
+                            lab_orders: [...prev.lab_orders, newLabOrder],
+                          }));
+
+                          setOtherLabTestForm({
+                            lab_test_name: "",
+                            instructions: "",
+                          });
+
+                          setOtherLabTestErrors({});
+                          setShowOtherLabTest(false);
+                        }}
+                      >
+                        <i className="bi bi-plus-circle me-1"></i>
+                        Add Lab Test
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          setShowOtherLabTest(false);
+                          setOtherLabTestErrors({});
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Added Lab Tests Table */}
+                  {formData.lab_orders.length > 0 && (
+                    <div className="table-responsive mt-4">
+                      <table className="table table-bordered align-middle">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Lab Test</th>
+                            <th>Instructions</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {formData.lab_orders.map((labOrder, index) => (
+                            <tr key={index}>
+                              <td>
+                                {labOrder.lab_test
+                                  ? labTests.find(
+                                      (test) => test.id === labOrder.lab_test,
+                                    )?.name || "Unknown Test"
+                                  : labOrder.lab_test_name}
+                              </td>
+
+                              <td>{labOrder.instructions || "-"}</td>
+
+                              <td>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      lab_orders: prev.lab_orders.filter(
+                                        (_, i) => i !== index,
+                                      ),
+                                    }));
+                                  }}
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
