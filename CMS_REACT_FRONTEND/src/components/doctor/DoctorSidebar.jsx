@@ -41,7 +41,8 @@ function DoctorSidebar() {
     <aside
       className="bg-white border-end flex-shrink-0 position-relative"
       style={{
-        width: collapsed ? "0px" : "240px",
+        width: collapsed ? "55px" : "240px",
+        minWidth: collapsed ? "55px" : "240px",
         minHeight: "calc(100vh - 56px)",
         transition: "width 0.3s ease",
       }}
@@ -75,16 +76,13 @@ function DoctorSidebar() {
                 to={item.path}
                 className={({ isActive }) =>
                   `nav-link d-flex align-items-center ${
-                    isActive ? "text-white fw-bold" : "text-dark"
+                    isActive ? "bg-primary text-white fw-bold" : "text-dark"
                   }`
                 }
-                style={({ isActive }) => ({
-                  backgroundColor: isActive ? "#1976A3" : "transparent",
-
+                style={{
                   borderRadius: "6px",
-
                   transition: "background-color 0.2s ease",
-                })}
+                }}
               >
                 {/* Icon */}
                 <span
