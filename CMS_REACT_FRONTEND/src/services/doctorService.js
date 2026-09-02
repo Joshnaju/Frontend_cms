@@ -8,3 +8,11 @@ export const getAppointments = (date, status) => {
     },
   });
 };
+
+export const createConsultation = (data) => {
+  return api.post("doctor/consultations/", data);
+};
+
+export const getAppointment = (appointmentId) => {
+  return api.get(`doctor/appointments/${appointmentId}/`);
+};
