@@ -7,6 +7,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import DoctorRoutes from "./routes/DoctorRoutes";
+import ReceptionistRoutes from "./routes/ReceptionistRoutes";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -44,6 +45,19 @@ function App() {
           element={
             <ProtectedRoute>
               <DoctorRoutes />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* =========================
+    RECEPTIONIST MODULE
+========================== */}
+
+        <Route
+          path="/receptionist/*"
+          element={
+            <ProtectedRoute>
+              <ReceptionistRoutes />
             </ProtectedRoute>
           }
         />
