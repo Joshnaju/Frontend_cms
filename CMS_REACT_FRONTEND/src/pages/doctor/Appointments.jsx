@@ -1,10 +1,13 @@
 // @ts-nocheck
+
 import { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import { getAppointments } from "../../services/doctorService";
 import "react-datepicker/dist/react-datepicker.css";
+import { useNavigate } from "react-router-dom";
 
 function Appointments() {
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeStatus, setActiveStatus] = useState("SCHEDULED");
 
@@ -43,10 +46,17 @@ function Appointments() {
   // AVAILABLE STATUS TABS
   // =====================================================
 
+  // CHANGED:
+  // Only Scheduled and Completed are shown.
+  //
+  // Future dates:
+  // Scheduled only
+  //
+  // Today/Past:
+  // Scheduled + Completed
+
   const availableStatuses =
-    dateType === "FUTURE"
-      ? ["SCHEDULED", "CANCELLED"]
-      : ["SCHEDULED", "COMPLETED", "CANCELLED"];
+    dateType === "FUTURE" ? ["SCHEDULED"] : ["SCHEDULED", "COMPLETED"];
 
   // =====================================================
   // FORMAT DATE FOR API
@@ -56,6 +66,7 @@ function Appointments() {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
+
     return `${year}-${month}-${day}`;
   };
 
@@ -96,6 +107,7 @@ function Appointments() {
       setLoading(false);
     }
   };
+
   // =====================================================
   // FETCH WHEN DATE / STATUS CHANGES
   // =====================================================
@@ -111,23 +123,8 @@ function Appointments() {
   const handleDateChange = (date) => {
     setSelectedDate(date);
 
-    // Future dates cannot have completed appointments
-    if (
-      date &&
-      (() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const selected = new Date(date);
-        selected.setHours(0, 0, 0, 0);
-
-        return selected > today;
-      })()
-    ) {
-      setActiveStatus("SCHEDULED");
-    } else {
-      setActiveStatus("SCHEDULED");
-    }
+    // Always reset to Scheduled when date changes
+    setActiveStatus("SCHEDULED");
 
     setSearch("");
   };
@@ -177,16 +174,19 @@ function Appointments() {
   const getStatusBadge = (status) => {
     switch (status) {
       case "SCHEDULED":
-        return <span className="badge bg-primary">Scheduled</span>;
+        return (
+          <span className="badge bg-primary px-3 py-2 fs-6">Scheduled</span>
+        );
 
       case "COMPLETED":
-        return <span className="badge bg-success">Completed</span>;
-
-      case "CANCELLED":
-        return <span className="badge bg-danger">Cancelled</span>;
+        return (
+          <span className="badge bg-success px-3 py-2 fs-6">Completed</span>
+        );
 
       default:
-        return <span className="badge bg-secondary">{status}</span>;
+        return (
+          <span className="badge bg-secondary px-3 py-2 fs-6">{status}</span>
+        );
     }
   };
 
@@ -202,13 +202,15 @@ function Appointments() {
       case "COMPLETED":
         return "Completed";
 
-      case "CANCELLED":
-        return "Cancelled";
-
       default:
         return status;
     }
   };
+
+  const showActionColumn =
+    (dateType === "TODAY" && activeStatus === "SCHEDULED") ||
+    (dateType === "TODAY" && activeStatus === "COMPLETED") ||
+    (dateType === "PAST" && activeStatus === "COMPLETED");
 
   return (
     <div className="container-fluid py-4">
@@ -251,14 +253,6 @@ function Appointments() {
                   <i className="bi bi-calendar3"></i>
                 </span>
 
-                {/* <DatePicker
-                  selected={selectedDate}
-                  onChange={handleDateChange}
-                  dateFormat="dd MMM yyyy"
-                  className="form-control"
-                  wrapperClassName="flex-grow-1"
-                  placeholderText="Select date"
-                /> */}
                 <DatePicker
                   selected={selectedDate}
                   onChange={handleDateChange}
@@ -280,14 +274,17 @@ function Appointments() {
               <label className="form-label fw-semibold">
                 Appointment Status
               </label>
-              {/* <div className="d-flex gap-2"> */}
 
-              <div className="btn-group w-100">
+              {/* CHANGED:
+                  Only Scheduled + Completed
+              */}
+
+              <div className="d-flex gap-2">
                 {availableStatuses.map((status) => (
                   <button
                     key={status}
                     type="button"
-                    className={`btn ${
+                    className={`btn flex-fill ${
                       activeStatus === status
                         ? "btn-primary"
                         : "btn-outline-secondary"
@@ -347,6 +344,7 @@ function Appointments() {
       {error && (
         <div className="alert alert-danger">
           <i className="bi bi-exclamation-circle me-2"></i>
+
           {error}
         </div>
       )}
@@ -383,14 +381,23 @@ function Appointments() {
 
                   <th>Status</th>
 
-                  <th className="text-end pe-4">Action</th>
+                  {showActionColumn && (
+                    <th className="text-end pe-4">Action</th>
+                  )}
                 </tr>
               </thead>
 
               <tbody>
                 {filteredAppointments.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-5">
+                    {/* CHANGED:
+                        Always 6 columns
+                    */}
+
+                    <td
+                      colSpan={showActionColumn ? 6 : 5}
+                      className="text-center py-5"
+                    >
                       <i className="bi bi-calendar-x fs-2 text-muted"></i>
 
                       <p className="text-muted mt-3 mb-0">
@@ -402,23 +409,17 @@ function Appointments() {
                 ) : (
                   filteredAppointments.map((appointment) => (
                     <tr key={appointment.id}>
-                      {/* TOKEN */}
-
                       <td className="ps-4">
                         <span className="fw-semibold">
                           {appointment.token_number || "-"}
                         </span>
                       </td>
 
-                      {/* TIME */}
-
                       <td>
                         <span className="fw-semibold">
                           {formatTime(appointment.appointment_time)}
                         </span>
                       </td>
-
-                      {/* PATIENT */}
 
                       <td>
                         <div className="fw-semibold">
@@ -430,56 +431,51 @@ function Appointments() {
                         </small>
                       </td>
 
-                      {/* TYPE */}
-
                       <td>
                         {appointment.appointment_type === "WALK_IN"
                           ? "Walk-in"
-                          : "Booking"}
+                          : "Prior-Booking"}
                       </td>
-
-                      {/* STATUS */}
 
                       <td>{getStatusBadge(appointment.status)}</td>
 
-                      {/* ACTION */}
+                      {showActionColumn && (
+                        <td className="text-end pe-4">
+                          {/* TODAY + SCHEDULED */}
+                          {appointment.status === "SCHEDULED" &&
+                            dateType === "TODAY" && (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-success"
+                                onClick={() =>
+                                  navigate(
+                                    `/doctor/consultation/${appointment.id}`,
+                                  )
+                                }
+                              >
+                                <i className="bi bi-clipboard2-pulse me-1"></i>
+                                Consult
+                              </button>
+                            )}
 
-                      <td className="text-end pe-4">
-                        {appointment.status === "SCHEDULED" ? (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-primary"
-                            onClick={() =>
-                              console.log(
-                                "Consult appointment:",
-                                appointment.id,
-                              )
-                            }
-                          >
-                            <i className="bi bi-clipboard2-pulse me-1"></i>
-                            Consult
-                          </button>
-                        ) : appointment.status === "COMPLETED" ? (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() =>
-                              console.log("View consultation:", appointment.id)
-                            }
-                          >
-                            <i className="bi bi-eye me-1"></i>
-                            View
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-secondary"
-                            disabled
-                          >
-                            No Action
-                          </button>
-                        )}
-                      </td>
+                          {/* TODAY/PAST + COMPLETED */}
+                          {appointment.status === "COMPLETED" && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() =>
+                                console.log(
+                                  "View consultation:",
+                                  appointment.id,
+                                )
+                              }
+                            >
+                              <i className="bi bi-eye me-1"></i>
+                              View
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
