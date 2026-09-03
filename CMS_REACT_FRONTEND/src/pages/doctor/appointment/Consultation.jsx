@@ -4,9 +4,9 @@ import {
   createConsultation,
   getAppointment,
   getMedicalHistoryByAppointment,
-} from "../../services/doctorService";
-import { getMedicines } from "../../services/medicineService";
-import { getLabTests } from "../../services/labTestService";
+} from "../../../services/doctorService";
+import { getMedicines } from "../../../services/medicineService";
+import { getLabTests } from "../../../services/labTestService";
 
 function Consultation() {
   const { appointmentId } = useParams();
