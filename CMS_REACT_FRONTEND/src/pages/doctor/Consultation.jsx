@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   createConsultation,
   getAppointment,
+  getMedicalHistoryByAppointment,
 } from "../../services/doctorService";
 import { getMedicines } from "../../services/medicineService";
 import { getLabTests } from "../../services/labTestService";
@@ -64,6 +65,8 @@ function Consultation() {
     instructions: "",
   });
 
+  const [medicalHistory, setMedicalHistory] = useState([]);
+
   const fetchLabTests = async () => {
     try {
       const response = await getLabTests();
@@ -87,8 +90,25 @@ function Consultation() {
     try {
       setLoading(true);
       setError("");
-      const response = await getAppointment(appointmentId);
-      setAppointment(response.data);
+
+      const appointmentResponse = await getAppointment(appointmentId);
+      setAppointment(appointmentResponse.data);
+
+      try {
+        const consultationResponse =
+          await getMedicalHistoryByAppointment(appointmentId);
+
+        setMedicalHistory(consultationResponse.data || []);
+      } catch (historyError) {
+        // No previous consultation is okay
+        if (historyError.response?.status === 404) {
+          setMedicalHistory([]);
+        } else {
+          console.error("Error loading medical history:", historyError);
+          setMedicalHistory([]);
+        }
+      }
+
       setLoading(false);
     } catch (error) {
       console.error("Error loading appointment:", error);
@@ -510,6 +530,312 @@ function Consultation() {
         </div>
       </div>
 
+      {/* =================================================
+    MEDICAL HISTORY
+================================================= */}
+      {/* ==================== MEDICAL HISTORY ==================== */}
+
+      <div className="card border-0 shadow-sm mb-4">
+        <div className="card-header bg-white">
+          <h5 className="mb-0 fw-semibold">
+            <i className="bi bi-clock-history me-2 text-primary-emphasis"></i>
+            Medical History
+          </h5>
+        </div>
+
+        <div className="card-body">
+          {medicalHistory.length === 0 ? (
+            /* ==================== NO MEDICAL HISTORY ==================== */
+
+            <div className="text-center text-muted py-4">
+              <i className="bi bi-clock-history fs-2 d-block mb-2"></i>
+
+              <div className="fw-semibold">No medical history available.</div>
+            </div>
+          ) : (
+            /* ==================== MEDICAL HISTORY ACCORDION ==================== */
+
+            <div className="accordion" id="medicalHistoryAccordion">
+              {medicalHistory.map((history, index) => (
+                <div
+                  className="accordion-item mb-3 border rounded overflow-hidden"
+                  key={history.id}
+                >
+                  {/* ==================== ACCORDION HEADER ==================== */}
+
+                  <h2 className="accordion-header">
+                    <button
+                      className={`accordion-button ${
+                        index !== 0 ? "collapsed" : ""
+                      }`}
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target={`#medicalHistory-${history.id}`}
+                      aria-expanded={index === 0}
+                      aria-controls={`medicalHistory-${history.id}`}
+                    >
+                      <div className="w-100">
+                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                          {/* LEFT SIDE - DATE */}
+
+                          <div className="d-flex align-items-center">
+                            <div className="me-3">
+                              <i className="bi bi-calendar2-check-fill fs-4 text-primary-emphasis"></i>
+                            </div>
+
+                            <div>
+                              <div className="fw-semibold text-dark">
+                                Previous Consultation
+                              </div>
+
+                              <div className="small text-muted">
+                                {history.consultation_date
+                                  ? new Date(
+                                      history.consultation_date,
+                                    ).toLocaleDateString()
+                                  : "-"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* RIGHT SIDE - DOCTOR & DEPARTMENT */}
+
+                          <div className="d-flex align-items-center gap-2 me-3 flex-wrap">
+                            {history.doctor_name && (
+                              <span className="badge bg-primary-subtle text-primary-emphasis px-3 py-2">
+                                <i className="bi bi-person-badge me-1"></i>
+                                Dr.{history.doctor_name}
+                              </span>
+                            )}
+
+                            {history.department_name && (
+                              <span className="badge bg-secondary-subtle text-secondary px-3 py-2">
+                                <i className="bi bi-hospital me-1"></i>
+
+                                {history.department_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </h2>
+
+                  {/* ==================== ACCORDION BODY ==================== */}
+
+                  <div
+                    id={`medicalHistory-${history.id}`}
+                    className={`accordion-collapse collapse ${
+                      index === 0 ? "show" : ""
+                    }`}
+                    data-bs-parent="#medicalHistoryAccordion"
+                  >
+                    <div className="accordion-body">
+                      {/* ==================== DOCTOR & DEPARTMENT ==================== */}
+
+                      <div className="row g-3 mb-4">
+                        {/* DOCTOR */}
+
+                        {history.doctor_name && (
+                          <div className="col-md-6">
+                            <div className="p-3 rounded border bg-light">
+                              <div className="d-flex align-items-center">
+                                <div className="me-3">
+                                  <i className="bi bi-person-badge-fill fs-4 text-primary-emphasis"></i>
+                                </div>
+
+                                <div>
+                                  <div className="text-muted small fw-semibold">
+                                    DOCTOR
+                                  </div>
+
+                                  <div className="fw-bold text-dark">
+                                    {history.doctor_name}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* DEPARTMENT */}
+
+                        {history.department_name && (
+                          <div className="col-md-6">
+                            <div className="p-3 rounded border bg-light">
+                              <div className="d-flex align-items-center">
+                                <div className="me-3">
+                                  <i className="bi bi-hospital-fill fs-4 text-primary-emphasis"></i>
+                                </div>
+
+                                <div>
+                                  <div className="text-muted small fw-semibold">
+                                    DEPARTMENT
+                                  </div>
+
+                                  <div className="fw-bold text-dark">
+                                    {history.department_name}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ==================== CONSULTATION DATE ==================== */}
+
+                      <div className="mb-4">
+                        <label className="text-muted small fw-semibold">
+                          Consultation Date
+                        </label>
+
+                        <div className="fw-semibold mt-1">
+                          {history.consultation_date
+                            ? new Date(
+                                history.consultation_date,
+                              ).toLocaleDateString()
+                            : "-"}
+                        </div>
+                      </div>
+
+                      {/* ==================== SYMPTOMS & DIAGNOSIS ==================== */}
+
+                      <div className="row">
+                        {/* SYMPTOMS */}
+
+                        <div className="col-md-6 mb-3">
+                          <label className="text-muted small fw-semibold">
+                            Symptoms
+                          </label>
+
+                          <div className="mt-1">{history.symptoms || "-"}</div>
+                        </div>
+
+                        {/* DIAGNOSIS */}
+
+                        <div className="col-md-6 mb-3">
+                          <label className="text-muted small fw-semibold">
+                            Diagnosis
+                          </label>
+
+                          <div className="mt-1">{history.diagnosis || "-"}</div>
+                        </div>
+                      </div>
+
+                      {/* ==================== NOTES ==================== */}
+
+                      <div className="mb-4">
+                        <label className="text-muted small fw-semibold">
+                          Notes
+                        </label>
+
+                        <div className="mt-1">{history.notes || "-"}</div>
+                      </div>
+
+                      {/* ==================== MEDICINES ==================== */}
+
+                      <div className="mt-4">
+                        <h6 className="fw-semibold mb-3">
+                          <i className="bi bi-prescription2 me-2 text-success"></i>
+                          Medicines
+                        </h6>
+
+                        {!history.medicine_prescriptions ||
+                        history.medicine_prescriptions.length === 0 ? (
+                          <div className="text-muted small">
+                            No medicines prescribed.
+                          </div>
+                        ) : (
+                          <div className="table-responsive">
+                            <table className="table table-bordered table-sm align-middle mb-0">
+                              <thead className="table-light">
+                                <tr>
+                                  <th>Medicine</th>
+
+                                  <th>Dosage</th>
+
+                                  <th>Frequency</th>
+
+                                  <th>Duration</th>
+
+                                  <th>Instructions</th>
+                                </tr>
+                              </thead>
+
+                              <tbody>
+                                {history.medicine_prescriptions.map(
+                                  (medicine) => (
+                                    <tr key={medicine.id}>
+                                      <td className="fw-semibold">
+                                        {medicine.medicine_name || "-"}
+                                      </td>
+
+                                      <td>{medicine.dosage || "-"}</td>
+
+                                      <td>{medicine.frequency || "-"}</td>
+
+                                      <td>{medicine.duration || "-"}</td>
+
+                                      <td>{medicine.instructions || "-"}</td>
+                                    </tr>
+                                  ),
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ==================== LAB ORDERS ==================== */}
+
+                      <div className="mt-4">
+                        <h6 className="fw-semibold mb-3">
+                          <i className="bi bi-clipboard2-plus me-2 text-info"></i>
+                          Lab Orders
+                        </h6>
+
+                        {!history.lab_orders ||
+                        history.lab_orders.length === 0 ? (
+                          <div className="text-muted small">
+                            No lab tests ordered.
+                          </div>
+                        ) : (
+                          <div className="table-responsive">
+                            <table className="table table-bordered table-sm align-middle mb-0">
+                              <thead className="table-light">
+                                <tr>
+                                  <th>Lab Test</th>
+
+                                  <th>Instructions</th>
+                                </tr>
+                              </thead>
+
+                              <tbody>
+                                {history.lab_orders.map((lab) => (
+                                  <tr key={lab.id}>
+                                    <td className="fw-semibold">
+                                      {lab.lab_test_name || "-"}
+                                    </td>
+
+                                    <td>{lab.instructions || "-"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ==================== END MEDICAL HISTORY ==================== */}
       {/* =================================================
           CONSULTATION FORM
       ================================================= */}

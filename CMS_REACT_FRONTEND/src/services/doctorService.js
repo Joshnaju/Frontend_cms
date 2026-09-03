@@ -20,3 +20,9 @@ export const getAppointment = (appointmentId) => {
 export const getConsultationByAppointment = (appointmentId) => {
   return api.get(`doctor/consultations/by-appointment/${appointmentId}/`);
 };
+
+export const getMedicalHistoryByAppointment = (appointmentId) => {
+  return api.get(
+    `/doctor/consultations/history-by-appointment/${appointmentId}/`,
+  );
+};
