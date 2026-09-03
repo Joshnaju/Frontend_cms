@@ -175,12 +175,16 @@ function Appointments() {
     switch (status) {
       case "SCHEDULED":
         return (
-          <span className="badge bg-primary px-3 py-2 fs-6">Scheduled</span>
+          <span className="badge bg-primary-subtle text-primary px-3 py-2 fs-6">
+            Scheduled
+          </span>
         );
 
       case "COMPLETED":
         return (
-          <span className="badge bg-success px-3 py-2 fs-6">Completed</span>
+          <span className="badge bg-success-subtle text-success px-3 py-2 fs-6">
+            Completed
+          </span>
         );
 
       default:
@@ -227,9 +231,13 @@ function Appointments() {
 
         <button
           type="button"
-          className="btn btn-outline-primary"
           onClick={fetchAppointments}
           disabled={loading}
+          className="btn"
+          style={{
+            backgroundColor: "var(--bs-primary-text-emphasis)",
+            color: "white",
+          }}
         >
           <i className="bi bi-arrow-clockwise me-2"></i>
           Refresh
@@ -274,11 +282,6 @@ function Appointments() {
               <label className="form-label fw-semibold">
                 Appointment Status
               </label>
-
-              {/* CHANGED:
-                  Only Scheduled + Completed
-              */}
-
               <div className="d-flex gap-2">
                 {availableStatuses.map((status) => (
                   <button
@@ -286,7 +289,7 @@ function Appointments() {
                     type="button"
                     className={`btn flex-fill ${
                       activeStatus === status
-                        ? "btn-primary"
+                        ? "btn-dark text-white"
                         : "btn-outline-secondary"
                     }`}
                     onClick={() => handleStatusChange(status)}
@@ -356,7 +359,10 @@ function Appointments() {
       {loading ? (
         <div className="card border-0 shadow-sm">
           <div className="card-body text-center py-5">
-            <div className="spinner-border text-primary" role="status"></div>
+            <div
+              className="spinner-border text-primary-emphasis"
+              role="status"
+            ></div>
 
             <p className="text-muted mt-3 mb-0">Loading appointments...</p>
           </div>
@@ -382,7 +388,7 @@ function Appointments() {
                   <th>Status</th>
 
                   {showActionColumn && (
-                    <th className="text-end pe-4">Action</th>
+                    <th className="text-end pe-5">Action</th>
                   )}
                 </tr>
               </thead>
@@ -446,7 +452,7 @@ function Appointments() {
                             dateType === "TODAY" && (
                               <button
                                 type="button"
-                                className="btn btn-sm btn-success"
+                                className="badge fs-6 btn btn-sm bg-success-subtle text-success"
                                 onClick={() =>
                                   navigate(
                                     `/doctor/consultation/${appointment.id}`,
@@ -462,11 +468,10 @@ function Appointments() {
                           {appointment.status === "COMPLETED" && (
                             <button
                               type="button"
-                              className="btn btn-sm btn-outline-primary"
+                              className="badge fs-6 btn btn-sm bg-warning-subtle text-warning"
                               onClick={() =>
-                                console.log(
-                                  "View consultation:",
-                                  appointment.id,
+                                navigate(
+                                  `/doctor/consultation/view/${appointment.id}`,
                                 )
                               }
                             >

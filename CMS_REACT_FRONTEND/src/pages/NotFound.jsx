@@ -53,15 +53,18 @@ function NotFound() {
           />
         </div>
 
-        <h1 className="display-1 fw-bold text-primary">404</h1>
+        <h1 className="display-1 fw-bold text-primary-emphasis">404</h1>
 
-        <h2 className="fw-bold">Page Not Found</h2>
+        <h2 className="fw-bold text-primary-emphasis">Page Not Found</h2>
 
         <p className="text-muted mb-4">
           Sorry, the page you are looking for does not exist.
         </p>
 
-        <button className="btn btn-primary px-4" onClick={handleGoHome}>
+        <button
+          className="btn text-white btn-dark  px-4"
+          onClick={handleGoHome}
+        >
           Go to Dashboard
         </button>
       </div>

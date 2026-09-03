@@ -49,7 +49,7 @@ function Navbar({ user, setUser }) {
   };
 
   return (
-    <nav className="navbar-expand-lg px-3 navbar navbar-dark bg-primary">
+    <nav className="navbar-expand-lg px-3 navbar navbar-dark bg-dark">
       {/* Logo */}
       <button
         className="btn text-white fw-bold fs-5 d-flex align-items-center"
@@ -63,7 +63,7 @@ function Navbar({ user, setUser }) {
           alt="Hospital"
           width="35"
           height="35"
-          className="me-2"
+          className="me-2 rounded-4"
         />
         Clinical Management System
       </button>
@@ -76,8 +76,8 @@ function Navbar({ user, setUser }) {
 
             {user.name}
           </span>
-
-          <button className="btn btn-outline-light" onClick={handleLogout}>
+          <button className="btn btn-secondary" onClick={handleLogout}>
+            <i className="bi bi-box-arrow-right me-2"></i>
             Logout
           </button>
         </div>

@@ -16,3 +16,13 @@ export const createConsultation = (data) => {
 export const getAppointment = (appointmentId) => {
   return api.get(`doctor/appointments/${appointmentId}/`);
 };
+
+export const getConsultationByAppointment = (appointmentId) => {
+  return api.get(`doctor/consultations/by-appointment/${appointmentId}/`);
+};
+
+export const getMedicalHistoryByAppointment = (appointmentId) => {
+  return api.get(
+    `/doctor/consultations/history-by-appointment/${appointmentId}/`,
+  );
+};
