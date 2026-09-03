@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import api from "../../services/api";
 
 function Patients() {
+  const location = useLocation();
   const [selectedAction, setSelectedAction] = useState(null);
   const [patients, setPatients] = useState([]);
   const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+
   const [editingPatient, setEditingPatient] = useState(null);
+  const [viewingPatient, setViewingPatient] = useState(null);
 
   const [searchType, setSearchType] = useState("patient_id");
   const [searchValue, setSearchValue] = useState("");
@@ -22,18 +27,60 @@ function Patients() {
 
   const [formData, setFormData] = useState(emptyForm);
 
+  // =======================================================
+  // FETCH ALL PATIENTS
+  // =======================================================
+
   const fetchPatients = async () => {
     try {
-      const response = await api.get("receptionist/patients/");
+      const response = await api.get(
+        "receptionist/patients/"
+      );
+
       setPatients(response.data);
     } catch (error) {
       console.error("Error fetching patients:", error);
+
+      setPatients([]);
+      setMessage("Unable to load patients.");
     }
   };
 
   useEffect(() => {
     fetchPatients();
   }, []);
+
+  // =======================================================
+  // SIDEBAR RESET
+  // =======================================================
+
+  useEffect(() => {
+    if (location.state?.resetSection) {
+      setSelectedAction(null);
+
+      setEditingPatient(null);
+      setViewingPatient(null);
+
+      setSearchType("patient_id");
+      setSearchValue("");
+
+      setMessage("");
+      setFieldErrors({});
+
+      setFormData(emptyForm);
+
+      fetchPatients();
+    }
+  }, [location.state?.resetKey]);
+
+  // =======================================================
+  // COMMON HELPERS
+  // =======================================================
+
+  const clearMessages = () => {
+    setMessage("");
+    setFieldErrors({});
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,317 +89,863 @@ function Patients() {
       ...prev,
       [name]: value,
     }));
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
 
-  // REGISTER
+  const getErrorMessage = (value) => {
+    if (Array.isArray(value)) {
+      return value.join(" ");
+    }
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    return "";
+  };
+
+  const handleApiErrors = (
+    error,
+    fallbackMessage
+  ) => {
+    const data = error.response?.data;
+
+    if (!data || typeof data !== "object") {
+      setMessage(fallbackMessage);
+      return;
+    }
+
+    const newFieldErrors = {};
+    const generalMessages = [];
+
+    Object.entries(data).forEach(
+      ([key, value]) => {
+        const errorText =
+          getErrorMessage(value);
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            emptyForm,
+            key
+          )
+        ) {
+          newFieldErrors[key] = errorText;
+        } else {
+          generalMessages.push(errorText);
+        }
+      }
+    );
+
+    setFieldErrors(newFieldErrors);
+
+    if (generalMessages.length > 0) {
+      setMessage(
+        generalMessages.join(" ")
+      );
+    }
+  };
+
+  // =======================================================
+  // REGISTER PATIENT
+  // =======================================================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    try {
-      await api.post("receptionist/patients/", formData);
+    clearMessages();
 
-      setMessage("Patient registered successfully.");
+    try {
+      await api.post(
+        "receptionist/patients/",
+        formData
+      );
+
+      setMessage(
+        "Patient registered successfully."
+      );
+
       setFormData(emptyForm);
 
       await fetchPatients();
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error(
+        "Registration error:",
+        error
+      );
 
-      if (error.response?.data) {
-        setMessage(
-          Object.values(error.response.data).flat().join(" ")
-        );
-      } else {
-        setMessage("Patient registration failed.");
-      }
+      handleApiErrors(
+        error,
+        "Patient registration failed."
+      );
     }
   };
 
-  // SEARCH
+  // =======================================================
+  // SEARCH PATIENT
+  // =======================================================
+
   const handleSearch = async () => {
+    clearMessages();
+
+    const value = searchValue.trim();
+
+    // If search is empty, show all patients again.
+    if (!value) {
+      await fetchPatients();
+
+      setMessage(
+        "Please enter a search value."
+      );
+
+      return;
+    }
+
     try {
-      setMessage("");
-
-      if (!searchValue.trim()) {
-        await fetchPatients();
-        return;
-      }
-
-      const response = await api.get("receptionist/patients/", {
-        params: {
-          [searchType]: searchValue.trim(),
-        },
-      });
+      const response = await api.get(
+        "receptionist/patients/",
+        {
+          params: {
+            [searchType]: value,
+          },
+        }
+      );
 
       setPatients(response.data);
+
+      if (response.data.length === 0) {
+        setMessage("No patients found.");
+      }
     } catch (error) {
-      console.error("Search error:", error);
-      setMessage("Unable to search patient.");
+      console.error(
+        "Search error:",
+        error
+      );
+
+      setPatients([]);
+      setMessage(
+        "Unable to search patient."
+      );
     }
   };
 
-  // EDIT BUTTON
+  // =======================================================
+  // CLEAR SEARCH
+  // =======================================================
+
+  const handleClearSearch = async () => {
+    setSearchValue("");
+
+    clearMessages();
+
+    // Restore all patient details.
+    await fetchPatients();
+  };
+
+  // =======================================================
+  // VIEW PATIENT
+  // =======================================================
+
+  const handleView = (patient) => {
+    setViewingPatient(patient);
+    setEditingPatient(null);
+
+    clearMessages();
+
+    setSelectedAction("view");
+  };
+
+  // =======================================================
+  // EDIT PATIENT
+  // =======================================================
+
   const handleEdit = (patient) => {
     setEditingPatient(patient);
+    setViewingPatient(null);
 
     setFormData({
-      patient_name: patient.patient_name || "",
-      date_of_birth: patient.date_of_birth || "",
-      gender: patient.gender || "",
-      address: patient.address || "",
-      mobile_number: patient.mobile_number || "",
-      email: patient.email || "",
-      blood_group: patient.blood_group || "",
+      patient_name:
+        patient.patient_name || "",
+
+      date_of_birth:
+        patient.date_of_birth || "",
+
+      gender:
+        patient.gender || "",
+
+      address:
+        patient.address || "",
+
+      mobile_number:
+        patient.mobile_number || "",
+
+      email:
+        patient.email || "",
+
+      blood_group:
+        patient.blood_group || "",
     });
 
-    setMessage("");
+    clearMessages();
+
     setSelectedAction("edit");
   };
 
-  // UPDATE
   const handleUpdate = async (e) => {
     e.preventDefault();
 
-    if (!editingPatient) return;
+    if (!editingPatient) {
+      return;
+    }
+
+    clearMessages();
 
     try {
-      await api.patch(
+      const response = await api.patch(
         `receptionist/patients/${editingPatient.id}/`,
         formData
       );
 
-      setMessage("Patient updated successfully.");
+      setEditingPatient(response.data);
+
+      setFormData({
+        patient_name:
+          response.data.patient_name || "",
+
+        date_of_birth:
+          response.data.date_of_birth || "",
+
+        gender:
+          response.data.gender || "",
+
+        address:
+          response.data.address || "",
+
+        mobile_number:
+          response.data.mobile_number || "",
+
+        email:
+          response.data.email || "",
+
+        blood_group:
+          response.data.blood_group || "",
+      });
+
+      setMessage(
+        "Patient updated successfully."
+      );
 
       await fetchPatients();
-
-      setEditingPatient(null);
-      setFormData(emptyForm);
-      setSelectedAction("details");
     } catch (error) {
-      console.error("Update error:", error);
+      console.error(
+        "Update error:",
+        error
+      );
 
-      if (error.response?.data) {
-        setMessage(
-          Object.values(error.response.data).flat().join(" ")
-        );
-      } else {
-        setMessage("Unable to update patient.");
-      }
+      handleApiErrors(
+        error,
+        "Unable to update patient."
+      );
     }
   };
 
-  // DISABLE / ENABLE
-  const handleToggleStatus = async (patient) => {
+  // =======================================================
+  // MAKE ACTIVE / INACTIVE
+  // =======================================================
+
+  const handleToggleStatus = async (
+    patient
+  ) => {
+    clearMessages();
+
     try {
       await api.patch(
         `receptionist/patients/${patient.id}/`,
         {
-          is_active: !patient.is_active,
+          is_active:
+            !patient.is_active,
         }
       );
 
       setMessage(
         patient.is_active
-          ? "Patient disabled successfully."
-          : "Patient enabled successfully."
+          ? "Patient marked as inactive successfully."
+          : "Patient marked as active successfully."
       );
 
-      await fetchPatients();
+      // If a search is currently active,
+      // refresh the same search results.
+      if (searchValue.trim()) {
+        const response = await api.get(
+          "receptionist/patients/",
+          {
+            params: {
+              [searchType]:
+                searchValue.trim(),
+            },
+          }
+        );
+
+        setPatients(response.data);
+      } else {
+        // Otherwise restore the full patient list.
+        await fetchPatients();
+      }
     } catch (error) {
-      console.error("Status update error:", error);
-      setMessage("Unable to update patient status.");
+      console.error(
+        "Status update error:",
+        error
+      );
+
+      setMessage(
+        "Unable to update patient status."
+      );
     }
   };
 
-  const goBack = async () => {
-    setSelectedAction(null);
-    setEditingPatient(null);
-    setMessage("");
-    setSearchValue("");
-    setFormData(emptyForm);
+  // =======================================================
+  // NAVIGATION
+  // =======================================================
 
-    await fetchPatients();
+  const goToMainMenu = () => {
+    setSelectedAction(null);
+
+    setEditingPatient(null);
+    setViewingPatient(null);
+
+    setMessage("");
+    setFieldErrors({});
+
+    setSearchValue("");
+
+    setFormData(emptyForm);
   };
 
+  const goBackToSearch = async () => {
+    setSelectedAction("search");
+
+    setEditingPatient(null);
+    setViewingPatient(null);
+
+    setMessage("");
+    setFieldErrors({});
+
+    setFormData(emptyForm);
+
+    // If the user previously searched,
+    // restore the same search results.
+    if (searchValue.trim()) {
+      try {
+        const response = await api.get(
+          "receptionist/patients/",
+          {
+            params: {
+              [searchType]:
+                searchValue.trim(),
+            },
+          }
+        );
+
+        setPatients(response.data);
+      } catch (error) {
+        console.error(
+          "Search refresh error:",
+          error
+        );
+      }
+    } else {
+      // If there is no active search,
+      // display all patients.
+      await fetchPatients();
+    }
+  };
+
+  // =======================================================
   // MAIN PATIENT MENU
+  // =======================================================
+
   if (!selectedAction) {
     return (
       <div>
-        <h2 className="mb-4">Patients</h2>
+        <h2 className="mb-4">
+          Patients
+        </h2>
 
         <div className="d-flex flex-wrap gap-3">
           <button
+            type="button"
             className="btn text-white p-4"
             style={{
-              backgroundColor: "#1976A3",
+              backgroundColor:
+                "#1976A3",
+
               width: "250px",
             }}
-            onClick={() => setSelectedAction("register")}
+            onClick={() => {
+              clearMessages();
+
+              setFormData(
+                emptyForm
+              );
+
+              setSelectedAction(
+                "register"
+              );
+            }}
           >
             Register Patient
           </button>
 
           <button
+            type="button"
             className="btn text-white p-4"
             style={{
-              backgroundColor: "#1976A3",
-              width: "250px",
-            }}
-            onClick={() => setSelectedAction("search")}
-          >
-            Search Patient
-          </button>
+              backgroundColor:
+                "#1976A3",
 
-          <button
-            className="btn text-white p-4"
-            style={{
-              backgroundColor: "#1976A3",
               width: "250px",
             }}
-            onClick={() => setSelectedAction("details")}
+            onClick={async () => {
+              clearMessages();
+
+              setSearchValue("");
+
+              setSelectedAction(
+                "search"
+              );
+
+              // IMPORTANT:
+              // Show all patients immediately.
+              await fetchPatients();
+            }}
           >
-            Patient Details
+            Search / Edit Patient
           </button>
         </div>
       </div>
     );
   }
 
-  // REGISTER
-  if (selectedAction === "register") {
+  // =======================================================
+  // REGISTER PATIENT
+  // =======================================================
+
+  if (
+    selectedAction ===
+    "register"
+  ) {
     return (
       <div>
-        <BackButton onClick={goBack} />
+        <BackButton
+          onClick={
+            goToMainMenu
+          }
+        />
 
-        <h3>Register Patient</h3>
+        <h3>
+          Register Patient
+        </h3>
 
         <PatientForm
-          formData={formData}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
+          formData={
+            formData
+          }
+          fieldErrors={
+            fieldErrors
+          }
+          handleChange={
+            handleChange
+          }
+          handleSubmit={
+            handleSubmit
+          }
           buttonText="Register Patient"
         />
 
-        {message && <p className="mt-3">{message}</p>}
+        {message && (
+          <div className="alert alert-info mt-3">
+            {message}
+          </div>
+        )}
       </div>
     );
   }
 
-  // SEARCH
-  if (selectedAction === "search") {
+  // =======================================================
+  // SEARCH / EDIT PATIENT
+  // =======================================================
+
+  if (
+    selectedAction ===
+    "search"
+  ) {
     return (
       <div>
-        <BackButton onClick={goBack} />
+        <BackButton
+          onClick={
+            goToMainMenu
+          }
+        />
 
-        <h3>Search Patient</h3>
+        <h3>
+          Search / Edit Patient
+        </h3>
 
-        <div className="row g-2 mt-3">
-          <div className="col-md-3">
+        {/* SEARCH CONTROLS */}
+
+        <div className="row g-2 mt-3 align-items-end">
+          <div className="col-12 col-md-3">
+            <label className="form-label">
+              Search By
+            </label>
+
             <select
               className="form-select"
-              value={searchType}
-              onChange={(e) => setSearchType(e.target.value)}
+              value={
+                searchType
+              }
+              onChange={async (
+                e
+              ) => {
+                setSearchType(
+                  e.target
+                    .value
+                );
+
+                setSearchValue(
+                  ""
+                );
+
+                clearMessages();
+
+                // Keep all patients displayed
+                // when changing search type.
+                await fetchPatients();
+              }}
             >
-              <option value="patient_id">Patient ID</option>
-              <option value="mobile_number">Mobile Number</option>
+              <option value="patient_id">
+                Patient ID
+              </option>
+
+              <option value="patient_name">
+                Patient Name
+              </option>
+
+              <option value="mobile_number">
+                Mobile Number
+              </option>
             </select>
           </div>
 
-          <div className="col-md-5">
+          <div className="col-12 col-md-5">
+            <label className="form-label">
+              Search Value
+            </label>
+
             <input
               type="text"
               className="form-control"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              value={
+                searchValue
+              }
+              onChange={(e) =>
+                setSearchValue(
+                  e.target
+                    .value
+                )
+              }
+              onKeyDown={(
+                e
+              ) => {
+                if (
+                  e.key ===
+                  "Enter"
+                ) {
+                  handleSearch();
+                }
+              }}
               placeholder={
-                searchType === "patient_id"
+                searchType ===
+                "patient_id"
                   ? "Enter Patient ID"
+                  : searchType ===
+                    "patient_name"
+                  ? "Enter Patient Name"
                   : "Enter Mobile Number"
               }
             />
           </div>
 
-          <div className="col-md-4">
-            <button
-              type="button"
-              className="btn text-white me-2"
-              style={{ backgroundColor: "#1976A3" }}
-              onClick={handleSearch}
-            >
-              Search
-            </button>
+          <div className="col-12 col-md-4">
+            <div className="d-flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn text-white"
+                style={{
+                  backgroundColor:
+                    "#1976A3",
+                }}
+                onClick={
+                  handleSearch
+                }
+              >
+                Search
+              </button>
 
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={async () => {
-                setSearchValue("");
-                setMessage("");
-                await fetchPatients();
-              }}
-            >
-              Clear
-            </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={
+                  handleClearSearch
+                }
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </div>
 
-        {message && <p className="mt-3">{message}</p>}
+        {message && (
+          <div className="alert alert-info mt-3">
+            {message}
+          </div>
+        )}
 
-        <PatientTable
-          patients={patients}
-          onEdit={handleEdit}
-          onToggleStatus={handleToggleStatus}
-        />
+        {/* PATIENT LIST */}
+
+        <div className="mt-4">
+          <h5 className="mb-3">
+            Patient Details
+          </h5>
+
+          <PatientTable
+            patients={
+              patients
+            }
+            onView={
+              handleView
+            }
+            onEdit={
+              handleEdit
+            }
+            onToggleStatus={
+              handleToggleStatus
+            }
+          />
+        </div>
       </div>
     );
   }
 
-  // DETAILS
-  if (selectedAction === "details") {
+  // =======================================================
+  // VIEW PATIENT
+  // =======================================================
+
+  if (
+    selectedAction ===
+      "view" &&
+    viewingPatient
+  ) {
     return (
       <div>
-        <BackButton onClick={goBack} />
-
-        <h3>Patient Details</h3>
-
-        {message && <p className="mt-3">{message}</p>}
-
-        <PatientTable
-          patients={patients}
-          onEdit={handleEdit}
-          onToggleStatus={handleToggleStatus}
+        <BackButton
+          onClick={
+            goBackToSearch
+          }
         />
-      </div>
-    );
-  }
 
-  // EDIT
-  if (selectedAction === "edit" && editingPatient) {
-    return (
-      <div>
-        <button
-          type="button"
-          className="btn btn-secondary mb-3"
-          onClick={() => {
-            setSelectedAction("details");
-            setEditingPatient(null);
-            setMessage("");
-            setFormData(emptyForm);
+        <h3 className="mb-4">
+          Patient Details
+        </h3>
+
+        <div
+          className="card shadow-sm"
+          style={{
+            maxWidth:
+              "750px",
           }}
         >
-          ← Back
-        </button>
+          <div className="card-body">
+            <PatientDetailRow
+              label="Patient ID"
+              value={
+                viewingPatient.patient_id
+              }
+            />
 
-        <h3>Edit Patient</h3>
+            <PatientDetailRow
+              label="Patient Name"
+              value={
+                viewingPatient.patient_name
+              }
+            />
 
-        <PatientForm
-          formData={formData}
-          handleChange={handleChange}
-          handleSubmit={handleUpdate}
-          buttonText="Update Patient"
+            <PatientDetailRow
+              label="Date of Birth"
+              value={
+                viewingPatient.date_of_birth
+              }
+            />
+
+            <PatientDetailRow
+              label="Gender"
+              value={
+                viewingPatient.gender
+              }
+            />
+
+            <PatientDetailRow
+              label="Address"
+              value={
+                viewingPatient.address
+              }
+            />
+
+            <PatientDetailRow
+              label="Mobile Number"
+              value={
+                viewingPatient.mobile_number
+              }
+            />
+
+            <PatientDetailRow
+              label="Email"
+              value={
+                viewingPatient.email ||
+                "-"
+              }
+            />
+
+            <PatientDetailRow
+              label="Blood Group"
+              value={
+                viewingPatient.blood_group ||
+                "-"
+              }
+            />
+
+            <PatientDetailRow
+              label="Status"
+              value={
+                viewingPatient.is_active
+                  ? "Active"
+                  : "Inactive"
+              }
+            />
+
+            <div className="mt-4 d-flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn btn-warning"
+                onClick={() =>
+                  handleEdit(
+                    viewingPatient
+                  )
+                }
+              >
+                Edit Patient
+              </button>
+
+              <button
+                type="button"
+                className={`btn ${
+                  viewingPatient.is_active
+                    ? "btn-danger"
+                    : "btn-success"
+                }`}
+                onClick={async () => {
+                  await handleToggleStatus(
+                    viewingPatient
+                  );
+
+                  try {
+                    const response =
+                      await api.get(
+                        `receptionist/patients/${viewingPatient.id}/`
+                      );
+
+                    setViewingPatient(
+                      response.data
+                    );
+                  } catch (
+                    error
+                  ) {
+                    console.error(
+                      "Unable to refresh patient:",
+                      error
+                    );
+                  }
+                }}
+              >
+                {viewingPatient.is_active
+                  ? "Make Inactive"
+                  : "Make Active"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {message && (
+          <div className="alert alert-info mt-3">
+            {message}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // =======================================================
+  // EDIT PATIENT
+  // =======================================================
+
+  if (
+    selectedAction ===
+      "edit" &&
+    editingPatient
+  ) {
+    return (
+      <div>
+        <BackButton
+          onClick={
+            goBackToSearch
+          }
         />
 
-        {message && <p className="mt-3">{message}</p>}
+        <h3>
+          Edit Patient
+        </h3>
+
+        <p className="text-muted mb-3">
+          Patient ID:{" "}
+          {
+            editingPatient.patient_id
+          }
+        </p>
+
+        <PatientForm
+          formData={
+            formData
+          }
+          fieldErrors={
+            fieldErrors
+          }
+          handleChange={
+            handleChange
+          }
+          handleSubmit={
+            handleUpdate
+          }
+          buttonText="Save Changes"
+        />
+
+        {message && (
+          <div className="alert alert-info mt-3">
+            {message}
+          </div>
+        )}
       </div>
     );
   }
@@ -360,112 +953,283 @@ function Patients() {
   return null;
 }
 
+// =========================================================
+// PATIENT FORM
+// =========================================================
+
 function PatientForm({
   formData,
+  fieldErrors,
   handleChange,
   handleSubmit,
   buttonText,
 }) {
+  const today =
+    new Date()
+      .toISOString()
+      .split("T")[0];
+
   return (
-    <form onSubmit={handleSubmit} className="mt-3">
-      <div className="mb-3">
-        <label>Patient Name</label>
+    <form
+      onSubmit={
+        handleSubmit
+      }
+      className="mt-3"
+      style={{
+        maxWidth:
+          "750px",
+      }}
+      noValidate
+    >
+      <FormFieldError
+        error={
+          fieldErrors.patient_name
+        }
+      >
+        <label className="form-label">
+          Patient Name
+        </label>
+
         <input
           type="text"
-          className="form-control"
+          className={`form-control ${
+            fieldErrors.patient_name
+              ? "is-invalid"
+              : ""
+          }`}
           name="patient_name"
-          value={formData.patient_name}
-          onChange={handleChange}
+          value={
+            formData.patient_name
+          }
+          onChange={
+            handleChange
+          }
           required
         />
-      </div>
+      </FormFieldError>
 
-      <div className="mb-3">
-        <label>Date of Birth</label>
+      <FormFieldError
+        error={
+          fieldErrors.date_of_birth
+        }
+      >
+        <label className="form-label">
+          Date of Birth
+        </label>
+
         <input
           type="date"
-          className="form-control"
+          className={`form-control ${
+            fieldErrors.date_of_birth
+              ? "is-invalid"
+              : ""
+          }`}
           name="date_of_birth"
-          value={formData.date_of_birth}
-          onChange={handleChange}
+          value={
+            formData.date_of_birth
+          }
+          max={
+            today
+          }
+          onChange={
+            handleChange
+          }
           required
         />
-      </div>
+      </FormFieldError>
 
-      <div className="mb-3">
-        <label>Gender</label>
+      <FormFieldError
+        error={
+          fieldErrors.gender
+        }
+      >
+        <label className="form-label">
+          Gender
+        </label>
+
         <select
-          className="form-select"
+          className={`form-select ${
+            fieldErrors.gender
+              ? "is-invalid"
+              : ""
+          }`}
           name="gender"
-          value={formData.gender}
-          onChange={handleChange}
+          value={
+            formData.gender
+          }
+          onChange={
+            handleChange
+          }
           required
         >
-          <option value="">Select Gender</option>
-          <option value="MALE">Male</option>
-          <option value="FEMALE">Female</option>
-          <option value="OTHER">Other</option>
-        </select>
-      </div>
+          <option value="">
+            Select Gender
+          </option>
 
-      <div className="mb-3">
-        <label>Address</label>
+          <option value="MALE">
+            Male
+          </option>
+
+          <option value="FEMALE">
+            Female
+          </option>
+
+          <option value="OTHER">
+            Other
+          </option>
+        </select>
+      </FormFieldError>
+
+      <FormFieldError
+        error={
+          fieldErrors.address
+        }
+      >
+        <label className="form-label">
+          Address
+        </label>
+
         <textarea
-          className="form-control"
+          className={`form-control ${
+            fieldErrors.address
+              ? "is-invalid"
+              : ""
+          }`}
           name="address"
-          value={formData.address}
-          onChange={handleChange}
+          value={
+            formData.address
+          }
+          onChange={
+            handleChange
+          }
+          rows="3"
           required
         />
-      </div>
+      </FormFieldError>
 
-      <div className="mb-3">
-        <label>Mobile Number</label>
+      <FormFieldError
+        error={
+          fieldErrors.mobile_number
+        }
+      >
+        <label className="form-label">
+          Mobile Number
+        </label>
+
         <input
           type="text"
-          className="form-control"
+          className={`form-control ${
+            fieldErrors.mobile_number
+              ? "is-invalid"
+              : ""
+          }`}
           name="mobile_number"
-          value={formData.mobile_number}
-          onChange={handleChange}
+          value={
+            formData.mobile_number
+          }
+          onChange={
+            handleChange
+          }
+          maxLength="10"
+          inputMode="numeric"
           required
         />
-      </div>
+      </FormFieldError>
 
-      <div className="mb-3">
-        <label>Email</label>
+      <FormFieldError
+        error={
+          fieldErrors.email
+        }
+      >
+        <label className="form-label">
+          Email
+        </label>
+
         <input
           type="email"
-          className="form-control"
+          className={`form-control ${
+            fieldErrors.email
+              ? "is-invalid"
+              : ""
+          }`}
           name="email"
-          value={formData.email}
-          onChange={handleChange}
+          value={
+            formData.email
+          }
+          onChange={
+            handleChange
+          }
         />
-      </div>
+      </FormFieldError>
 
-      <div className="mb-3">
-        <label>Blood Group</label>
+      <FormFieldError
+        error={
+          fieldErrors.blood_group
+        }
+      >
+        <label className="form-label">
+          Blood Group
+        </label>
+
         <select
-          className="form-select"
+          className={`form-select ${
+            fieldErrors.blood_group
+              ? "is-invalid"
+              : ""
+          }`}
           name="blood_group"
-          value={formData.blood_group}
-          onChange={handleChange}
+          value={
+            formData.blood_group
+          }
+          onChange={
+            handleChange
+          }
         >
-          <option value="">Select Blood Group</option>
-          <option value="A+">A+</option>
-          <option value="A-">A-</option>
-          <option value="B+">B+</option>
-          <option value="B-">B-</option>
-          <option value="AB+">AB+</option>
-          <option value="AB-">AB-</option>
-          <option value="O+">O+</option>
-          <option value="O-">O-</option>
+          <option value="">
+            Select Blood Group
+          </option>
+
+          <option value="A+">
+            A+
+          </option>
+
+          <option value="A-">
+            A-
+          </option>
+
+          <option value="B+">
+            B+
+          </option>
+
+          <option value="B-">
+            B-
+          </option>
+
+          <option value="AB+">
+            AB+
+          </option>
+
+          <option value="AB-">
+            AB-
+          </option>
+
+          <option value="O+">
+            O+
+          </option>
+
+          <option value="O-">
+            O-
+          </option>
         </select>
-      </div>
+      </FormFieldError>
 
       <button
         type="submit"
         className="btn text-white"
-        style={{ backgroundColor: "#1976A3" }}
+        style={{
+          backgroundColor:
+            "#1976A3",
+        }}
       >
         {buttonText}
       </button>
@@ -473,62 +1237,187 @@ function PatientForm({
   );
 }
 
-function PatientTable({ patients, onEdit, onToggleStatus }) {
+// =========================================================
+// FIELD ERROR
+// =========================================================
+
+function FormFieldError({
+  error,
+  children,
+}) {
   return (
-    <div className="table-responsive mt-4">
-      <table className="table table-bordered">
+    <div className="mb-3">
+      {children}
+
+      {error && (
+        <div
+          className="text-danger mt-1"
+          style={{
+            fontSize:
+              "0.875rem",
+          }}
+        >
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =========================================================
+// PATIENT TABLE
+// =========================================================
+
+function PatientTable({
+  patients,
+  onView,
+  onEdit,
+  onToggleStatus,
+}) {
+  return (
+    <div className="table-responsive">
+      <table className="table table-bordered table-hover align-middle">
         <thead>
           <tr>
-            <th>Patient ID</th>
-            <th>Name</th>
-            <th>Mobile</th>
-            <th>Gender</th>
-            <th>Blood Group</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th className="text-nowrap">
+              Patient ID
+            </th>
+
+            <th>
+              Name
+            </th>
+
+            <th className="text-nowrap">
+              Mobile
+            </th>
+
+            <th>
+              Gender
+            </th>
+
+            <th className="text-nowrap">
+              Blood Group
+            </th>
+
+            <th>
+              Status
+            </th>
+
+            <th className="text-center">
+              Actions
+            </th>
           </tr>
         </thead>
 
         <tbody>
-          {patients.length > 0 ? (
-            patients.map((patient) => (
-              <tr key={patient.id}>
-                <td>{patient.patient_id}</td>
-                <td>{patient.patient_name}</td>
-                <td>{patient.mobile_number}</td>
-                <td>{patient.gender}</td>
-                <td>{patient.blood_group || "-"}</td>
+          {patients.length >
+          0 ? (
+            patients.map(
+              (
+                patient
+              ) => (
+                <tr
+                  key={
+                    patient.id
+                  }
+                >
+                  <td className="text-nowrap">
+                    {
+                      patient.patient_id
+                    }
+                  </td>
 
-                <td>
-                  {patient.is_active ? "Active" : "Disabled"}
-                </td>
+                  <td>
+                    {
+                      patient.patient_name
+                    }
+                  </td>
 
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-warning me-2"
-                    onClick={() => onEdit(patient)}
-                  >
-                    Edit
-                  </button>
+                  <td className="text-nowrap">
+                    {
+                      patient.mobile_number
+                    }
+                  </td>
 
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${
-                      patient.is_active
-                        ? "btn-danger"
-                        : "btn-success"
-                    }`}
-                    onClick={() => onToggleStatus(patient)}
-                  >
-                    {patient.is_active ? "Disable" : "Enable"}
-                  </button>
-                </td>
-              </tr>
-            ))
+                  <td>
+                    {
+                      patient.gender
+                    }
+                  </td>
+
+                  <td>
+                    {patient.blood_group ||
+                      "-"}
+                  </td>
+
+                  <td>
+                    <span
+                      className={`badge ${
+                        patient.is_active
+                          ? "bg-success"
+                          : "bg-secondary"
+                      }`}
+                    >
+                      {patient.is_active
+                        ? "Active"
+                        : "Inactive"}
+                    </span>
+                  </td>
+
+                  <td>
+                    <div className="d-flex flex-column flex-xl-row justify-content-center gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary text-nowrap"
+                        onClick={() =>
+                          onView(
+                            patient
+                          )
+                        }
+                      >
+                        View
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-warning text-nowrap"
+                        onClick={() =>
+                          onEdit(
+                            patient
+                          )
+                        }
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`btn btn-sm text-nowrap ${
+                          patient.is_active
+                            ? "btn-danger"
+                            : "btn-success"
+                        }`}
+                        onClick={() =>
+                          onToggleStatus(
+                            patient
+                          )
+                        }
+                      >
+                        {patient.is_active
+                          ? "Make Inactive"
+                          : "Make Active"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            )
           ) : (
             <tr>
-              <td colSpan="7" className="text-center">
+              <td
+                colSpan="7"
+                className="text-center py-4"
+              >
                 No patients found.
               </td>
             </tr>
@@ -539,12 +1428,41 @@ function PatientTable({ patients, onEdit, onToggleStatus }) {
   );
 }
 
-function BackButton({ onClick }) {
+// =========================================================
+// PATIENT DETAILS ROW
+// =========================================================
+
+function PatientDetailRow({
+  label,
+  value,
+}) {
+  return (
+    <div className="row py-2 border-bottom">
+      <div className="col-sm-4 fw-bold">
+        {label}
+      </div>
+
+      <div className="col-sm-8">
+        {value || "-"}
+      </div>
+    </div>
+  );
+}
+
+// =========================================================
+// BACK BUTTON
+// =========================================================
+
+function BackButton({
+  onClick,
+}) {
   return (
     <button
       type="button"
       className="btn btn-secondary mb-3"
-      onClick={onClick}
+      onClick={
+        onClick
+      }
     >
       ← Back
     </button>
