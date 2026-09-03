@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
-import { getAppointments } from "../../services/doctorService";
+import { getAppointments } from "../../../services/doctorService";
 import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from "react-router-dom";
+import "./Appointments.css";
 
 function Appointments() {
   const navigate = useNavigate();
@@ -252,21 +253,18 @@ function Appointments() {
         <div className="card-body">
           <div className="row align-items-end">
             {/* DATE PICKER */}
-
             <div className="col-lg-4 mb-3 mb-lg-0">
               <label className="form-label fw-semibold">Appointment Date</label>
 
-              <div className="input-group">
-                <span className="input-group-text bg-white">
-                  <i className="bi bi-calendar3"></i>
-                </span>
+              <div className="appointment-date">
+                <i className="bi bi-calendar3 appointment-date-icon"></i>
 
                 <DatePicker
                   selected={selectedDate}
                   onChange={handleDateChange}
                   dateFormat="dd MMM yyyy"
-                  className="form-control"
-                  wrapperClassName="flex-grow-1"
+                  className="appointment-date-input"
+                  wrapperClassName="appointment-date-wrapper"
                   placeholderText="Select date"
                   isClearable={false}
                   onKeyDown={(e) => {
@@ -301,8 +299,38 @@ function Appointments() {
             </div>
 
             {/* SEARCH */}
-
             <div className="col-lg-3">
+              <label className="form-label fw-semibold mb-2">
+                Search Patient
+              </label>
+
+              <div className="patient-search">
+                {/* Search Icon */}
+                <i className="bi bi-search patient-search-icon"></i>
+
+                {/* Search Input */}
+                <input
+                  type="text"
+                  className="patient-search-input"
+                  placeholder="Name or patient ID"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+
+                {/* Clear Button */}
+                {search && (
+                  <button
+                    type="button"
+                    className="patient-search-clear"
+                    onClick={() => setSearch("")}
+                    title="Clear search"
+                  >
+                    <i className="bi bi-x-lg"></i>
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* <div className="col-lg-3">
               <label className="form-label fw-semibold">Search Patient</label>
 
               <div className="input-group">
@@ -318,7 +346,7 @@ function Appointments() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

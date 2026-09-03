@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   getAppointment,
   getConsultationByAppointment,
-} from "../../services/doctorService";
+} from "../../../services/doctorService";
 
 function ConsultationView() {
   const { appointmentId } = useParams();
@@ -239,11 +239,10 @@ function ConsultationView() {
             {/* APPOINTMENT TYPE */}
             <div className="col-md-4 mb-4">
               <label className="text-muted small">Appointment Type</label>
-
               <div className="fw-semibold">
                 {appointment?.appointment_type === "WALK_IN"
                   ? "Walk-in"
-                  : appointment?.appointment_type === "BOOKING"
+                  : appointment?.appointment_type === "PRIOR_BOOKING"
                     ? "Booking"
                     : "-"}
               </div>

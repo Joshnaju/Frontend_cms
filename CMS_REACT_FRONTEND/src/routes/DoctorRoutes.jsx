@@ -3,9 +3,11 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import DoctorLayout from "../components/doctor/DoctorLayout";
 
 import DoctorDashboard from "../pages/doctor/DoctorDashboard";
-import Appointments from "../pages/doctor/Appointments";
-import Consultation from "../pages/doctor/Consultation";
-import ConsultationView from "../pages/doctor/ConsultationView";
+import Appointments from "../pages/doctor/appointment/Appointments";
+import Consultation from "../pages/doctor/appointment/Consultation";
+import ConsultationView from "../pages/doctor/appointment/ConsultationView";
+import DoctorPatientsHistroy from "../pages/doctor/patients/DoctorPatientsHistroy";
+import DoctorPatientView from "../pages/doctor/patients/DoctorPatientView";
 
 function DoctorRoutes() {
   return (
@@ -19,6 +21,8 @@ function DoctorRoutes() {
           path="consultation/view/:appointmentId"
           element={<ConsultationView />}
         />
+        <Route path="patients" element={<DoctorPatientsHistroy />} />
+        <Route path="patients/:patientId" element={<DoctorPatientView />} />
       </Route>
     </Routes>
   );
