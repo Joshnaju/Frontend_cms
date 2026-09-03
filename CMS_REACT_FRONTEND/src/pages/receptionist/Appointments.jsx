@@ -12,6 +12,7 @@ function Appointments() {
   const [searchType, setSearchType] = useState("patient_id");
   const [searchValue, setSearchValue] = useState("");
   const [patient, setPatient] = useState(null);
+  const [patientSearchResults, setPatientSearchResults] = useState([]);
 
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState("");
@@ -125,7 +126,11 @@ function Appointments() {
   const handleSearchPatient = async () => {
     if (!searchValue.trim()) {
       setMessage(
-        "Please enter a patient ID or mobile number."
+        searchType === "patient_id"
+          ? "Please enter a Patient ID."
+          : searchType === "patient_name"
+          ? "Please enter a Patient Name."
+          : "Please enter a Mobile Number."
       );
       return;
     }
@@ -133,6 +138,7 @@ function Appointments() {
     try {
       setMessage("");
       setPatient(null);
+      setPatientSearchResults([]);
       setBookingResult(null);
       setShowBookingSuccess(false);
       setFeePreview(null);
@@ -151,16 +157,22 @@ function Appointments() {
         return;
       }
 
-      const foundPatient = response.data[0];
+      if (searchType === "patient_id") {
+        const foundPatient = response.data[0];
 
-      if (!foundPatient.is_active) {
-        setMessage(
-          "This patient is inactive and cannot book an appointment."
-        );
+        if (!foundPatient.is_active) {
+          setMessage(
+            "This patient is inactive and cannot book an appointment."
+          );
+          setPatientSearchResults(response.data);
+          return;
+        }
+
+        setPatient(foundPatient);
         return;
       }
 
-      setPatient(foundPatient);
+      setPatientSearchResults(response.data);
     } catch (error) {
       console.error(
         "Error searching patient:",
@@ -169,6 +181,27 @@ function Appointments() {
 
       setMessage("Unable to search patient.");
     }
+  };
+
+  const handleSelectPatient = (selectedPatient) => {
+    if (!selectedPatient.is_active) {
+      setMessage(
+        "This patient is inactive and cannot book an appointment."
+      );
+      return;
+    }
+
+    setPatient(selectedPatient);
+    setPatientSearchResults([]);
+    setMessage("");
+
+    setSelectedDepartment("");
+    setDoctors([]);
+    setSelectedDoctor("");
+
+    setAppointmentTime("");
+    setSlotMessage("");
+    setFeePreview(null);
   };
 
   // =====================================================
@@ -661,6 +694,7 @@ function Appointments() {
     setSearchType("patient_id");
     setSearchValue("");
     setPatient(null);
+    setPatientSearchResults([]);
 
     setSelectedDepartment("");
     setDoctors([]);
@@ -909,11 +943,16 @@ function Appointments() {
 
                     setSearchValue("");
                     setPatient(null);
+                    setPatientSearchResults([]);
                     setFeePreview(null);
                   }}
                 >
                   <option value="patient_id">
                     Patient ID
+                  </option>
+
+                  <option value="patient_name">
+                    Patient Name
                   </option>
 
                   <option value="mobile_number">
@@ -929,6 +968,8 @@ function Appointments() {
                   placeholder={
                     searchType === "patient_id"
                       ? "Enter Patient ID"
+                      : searchType === "patient_name"
+                      ? "Enter Patient Name"
                       : "Enter Mobile Number"
                   }
                   value={searchValue}
@@ -958,6 +999,68 @@ function Appointments() {
             </div>
           </div>
         </div>
+
+        {patientSearchResults.length > 0 && (
+          <div className="card mt-4">
+            <div className="card-body">
+              <h5 className="mb-3">
+                Matching Patients
+              </h5>
+
+              <div className="table-responsive">
+                <table className="table table-bordered align-middle">
+                  <thead>
+                    <tr>
+                      <th>Patient ID</th>
+                      <th>Name</th>
+                      <th>Date of Birth</th>
+                      <th>Gender</th>
+                      <th>Mobile Number</th>
+                      <th>Blood Group</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {patientSearchResults.map(
+                      (searchPatient) => (
+                        <tr key={searchPatient.id}>
+                          <td>{searchPatient.patient_id}</td>
+                          <td>{searchPatient.patient_name}</td>
+                          <td>{searchPatient.date_of_birth}</td>
+                          <td>{searchPatient.gender}</td>
+                          <td>{searchPatient.mobile_number}</td>
+                          <td>{searchPatient.blood_group || "-"}</td>
+                          <td>
+                            {searchPatient.is_active
+                              ? "Active"
+                              : "Inactive"}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="btn btn-sm text-white"
+                              style={{
+                                backgroundColor: "#1976A3",
+                              }}
+                              disabled={!searchPatient.is_active}
+                              onClick={() =>
+                                handleSelectPatient(searchPatient)
+                              }
+                            >
+                              Select Patient
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {patient && (
           <>
