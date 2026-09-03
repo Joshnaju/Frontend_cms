@@ -392,7 +392,9 @@ function Consultation() {
     <div className="container-fluid py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h3 className="fw-semibold mb-1">Consultation</h3>
+          <h3 className="fw-semibold mb-1 text-primary-emphasis">
+            Consultation
+          </h3>
 
           <p className="text-muted mb-0">Record patient consultation details</p>
         </div>
@@ -417,8 +419,8 @@ function Consultation() {
 
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-header bg-white">
-          <h5 className="mb-0 fw-semibold">
-            <i className="bi bi-person-circle me-2 text-primary"></i>
+          <h5 className="mb-0 fw-semibold text-primary-emphasis">
+            <i className="bi bi-person-circle me-2"></i>
             Patient Information
           </h5>
         </div>
@@ -537,9 +539,9 @@ function Consultation() {
 
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-header bg-white">
-          <h5 className="mb-0 fw-semibold">
-            <i className="bi bi-clock-history me-2 text-primary-emphasis"></i>
-            Medical History
+          <h5 className="mb-0 fw-semibold ">
+            <i className="bi bi-clock-history me-2 fs-4 text-info"></i>
+            <span className="text-primary-emphasis">Medical History</span>
           </h5>
         </div>
 
@@ -844,8 +846,10 @@ function Consultation() {
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-header bg-white">
             <h5 className="mb-0 fw-semibold">
-              <i className="bi bi-clipboard2-pulse me-2 text-warning"></i>
-              Consultation Details
+              <i className="fs-4 bi bi-clipboard2-pulse me-2 text-warning"></i>
+              <span className="text-primary-emphasis">
+                Consultation Details
+              </span>
             </h5>
           </div>
 
@@ -918,20 +922,12 @@ function Consultation() {
             </div>
           </div>
         </div>
-
-        {/* =================================================
-            PRESCRIPTION / LAB ORDER
-        ================================================= */}
-
-        {/* PRESCRIPTIONS */}
-        {/* =================================================
-    PRESCRIPTION / LAB ORDER
-================================================= */}
-
         {/* PRESCRIPTIONS */}
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-header bg-white">
-            <h5 className="mb-0 fw-semibold">Prescriptions</h5>
+            <h5 className="mb-0 fw-semibold">
+              <span className="text-primary-emphasis">Prescriptions</span>
+            </h5>
           </div>
 
           <div className="card-body">
@@ -943,8 +939,8 @@ function Consultation() {
               {/* Medicine Header */}
               <div className="card-header">
                 <h5 className="mb-0">
-                  <i className="bi bi-prescription2 me-2 text-success-emphasis"></i>
-                  Medicine
+                  <i className="fs-4 bi bi-prescription2 me-2 text-success-emphasis"></i>
+                  <span className="text-primary-emphasis">Medicine</span>
                 </h5>
               </div>
 
@@ -1373,8 +1369,8 @@ function Consultation() {
               {/* Lab Header */}
               <div className="card-header">
                 <h5 className="mb-0">
-                  <i className="bi bi-clipboard2-plus me-2 text-info-emphasis"></i>
-                  Lab Orders
+                  <i className="fs-4 bi bi-clipboard2-plus me-2 text-info"></i>
+                  <span className="text-primary-emphasis">Lab Orders</span>
                 </h5>
               </div>
 

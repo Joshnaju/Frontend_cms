@@ -92,7 +92,9 @@ function DoctorPatientView() {
         </button>
 
         <div>
-          <h4 className="mb-1 fw-bold">Patient Details</h4>
+          <h4 className="mb-1 fw-bold text-primary-emphasis">
+            Patient Details
+          </h4>
 
           <p className="text-muted mb-0">
             {patient.patient_id} - {patient.patient_name}
@@ -106,8 +108,8 @@ function DoctorPatientView() {
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-header bg-white py-3">
           <h5 className="mb-0 fw-semibold">
-            <i className="bi bi-person-circle text-primary me-2"></i>
-            Patient Information
+            <i className="bi bi-person-circle text-primary-emphasis me-2 fe-4"></i>
+            <span className="text-primary-emphasis">Patient Information</span>
           </h5>
         </div>
 
@@ -172,15 +174,12 @@ function DoctorPatientView() {
         </div>
       </div>
 
-      {/* =====================================================
-          CONSULTATION HISTORY
-      ====================================================== */}
       {/* Consultation History */}
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-header bg-white py-3">
           <h5 className="mb-0 fw-semibold">
-            <i className="bi bi-clock-history text-primary me-2"></i>
-            Consultation History
+            <i className="bi bi-clock-history text-info me-2 fs-4"></i>
+            <span className="text-primary-emphasis">Consultation History</span>
           </h5>
         </div>
 
@@ -236,10 +235,10 @@ function DoctorPatientView() {
                   <div className="ms-4">
                     <button
                       type="button"
-                      className="btn btn-sm btn-outline-primary"
+                      className="btn btn-sm btn-outline-dark"
                       onClick={() =>
                         navigate(
-                          `/doctor/consultation/view/${consultation.appointment}`,
+                          `/doctor/patients/${patient.id}/consultation/${consultation.appointment}`,
                         )
                       }
                     >
