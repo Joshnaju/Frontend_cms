@@ -1,47 +1,82 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import api from "../../services/api";
 
 function Appointments() {
+  const location = useLocation();
   const [selectedAction, setSelectedAction] = useState(null);
 
   const [appointments, setAppointments] = useState([]);
   const [filterDate, setFilterDate] = useState("");
-  const [appointmentTypeFilter, setAppointmentTypeFilter] = useState("ALL");
+  const [appointmentTypeFilter, setAppointmentTypeFilter] =
+    useState("ALL");
   const [message, setMessage] = useState("");
+
+  // =====================================================
+  // BOOKING STATES
+  // =====================================================
 
   const [searchType, setSearchType] = useState("patient_id");
   const [searchValue, setSearchValue] = useState("");
   const [patient, setPatient] = useState(null);
-  const [patientSearchResults, setPatientSearchResults] = useState([]);
+  const [patientSearchResults, setPatientSearchResults] =
+    useState([]);
 
   const [departments, setDepartments] = useState([]);
-  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedDepartment, setSelectedDepartment] =
+    useState("");
 
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState("");
 
-  const [appointmentType, setAppointmentType] = useState("WALK_IN");
+  const [appointmentType, setAppointmentType] =
+    useState("WALK_IN");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [appointmentTime, setAppointmentTime] = useState("");
 
-  const [paymentStatus, setPaymentStatus] = useState("UNPAID");
-
-  const [bookingResult, setBookingResult] = useState(null);
-  const [showBookingSuccess, setShowBookingSuccess] = useState(false);
-
+  const [availableSlots, setAvailableSlots] = useState([]);
   const [slotMessage, setSlotMessage] = useState("");
   const [loadingSlot, setLoadingSlot] = useState(false);
 
+  const [paymentStatus, setPaymentStatus] = useState("UNPAID");
   const [feePreview, setFeePreview] = useState(null);
 
+  const [bookingResult, setBookingResult] = useState(null);
+  const [showBookingSuccess, setShowBookingSuccess] =
+    useState(false);
+
   // =====================================================
-  // DATE HELPERS
+  // EDIT APPOINTMENT STATES
+  // =====================================================
+
+  const [editingAppointment, setEditingAppointment] =
+    useState(null);
+
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+
+  const [editAvailableSlots, setEditAvailableSlots] =
+    useState([]);
+
+  const [loadingEditSlots, setLoadingEditSlots] =
+    useState(false);
+
+  const [editSlotMessage, setEditSlotMessage] = useState("");
+
+  // =====================================================
+  // DATE / TIME HELPERS
   // =====================================================
 
   const formatDate = (date) => {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      date.getDate()
+    ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
   };
@@ -52,41 +87,109 @@ function Appointments() {
 
   const getTomorrow = () => {
     const date = new Date();
-    date.setDate(date.getDate() + 1);
+
+    date.setDate(
+      date.getDate() + 1
+    );
 
     return formatDate(date);
   };
 
   const getDayAfterTomorrow = () => {
     const date = new Date();
-    date.setDate(date.getDate() + 2);
+
+    date.setDate(
+      date.getDate() + 2
+    );
 
     return formatDate(date);
   };
 
-  // =====================================================
-  // FETCH APPOINTMENTS
-  // =====================================================
-
-  const fetchAppointments = async () => {
-    try {
-      const response = await api.get(
-        "receptionist/appointments/"
-      );
-
-      setAppointments(response.data);
-    } catch (error) {
-      console.error(
-        "Error fetching appointments:",
-        error
-      );
-
-      setMessage("Unable to load appointments.");
+  const formatTime = (time) => {
+    if (!time) {
+      return "-";
     }
+
+    return time.slice(0, 5);
+  };
+
+  const formatAppointmentType = (type) => {
+    if (type === "WALK_IN") {
+      return "Walk-in";
+    }
+
+    if (type === "PRIOR_BOOKING") {
+      return "Prior Booking";
+    }
+
+    return type;
   };
 
   // =====================================================
-  // FETCH DEPARTMENTS
+  // API ERROR HELPER
+  // =====================================================
+
+  const getApiErrorMessage = (
+    error,
+    fallback = "Something went wrong."
+  ) => {
+    const data = error.response?.data;
+
+    if (!data) {
+      return fallback;
+    }
+
+    if (typeof data === "string") {
+      return data;
+    }
+
+    if (data.detail) {
+      return Array.isArray(data.detail)
+        ? data.detail.join(" ")
+        : data.detail;
+    }
+
+    const messages = [];
+
+    Object.values(data).forEach((value) => {
+      if (Array.isArray(value)) {
+        messages.push(...value);
+      } else if (
+        typeof value === "string"
+      ) {
+        messages.push(value);
+      } else if (
+        value &&
+        typeof value === "object"
+      ) {
+        Object.values(value).forEach(
+          (nestedValue) => {
+            if (
+              Array.isArray(nestedValue)
+            ) {
+              messages.push(
+                ...nestedValue
+              );
+            } else if (
+              typeof nestedValue ===
+              "string"
+            ) {
+              messages.push(
+                nestedValue
+              );
+            }
+          }
+        );
+      }
+    });
+
+    return messages.length > 0
+      ? messages.join(" ")
+      : fallback;
+  };
+
+  // =====================================================
+  // DEPARTMENTS
   // =====================================================
 
   const fetchDepartments = async () => {
@@ -102,20 +205,139 @@ function Appointments() {
         error
       );
 
-      setMessage("Unable to load departments.");
+      setMessage(
+        "Unable to load departments."
+      );
     }
   };
 
+  // =====================================================
+  // APPOINTMENTS
+  // =====================================================
+
+  const fetchAppointments = async (
+    viewType = null,
+    date = "",
+    type = "ALL"
+  ) => {
+    try {
+      setMessage("");
+
+      const params = {};
+
+      if (viewType) {
+        params.view = viewType;
+      }
+
+      if (date) {
+        params.date = date;
+      }
+
+      if (type !== "ALL") {
+        params.appointment_type = type;
+      }
+
+      const response = await api.get(
+        "receptionist/appointments/",
+        {
+          params,
+        }
+      );
+
+      /*
+       * IMPORTANT:
+       * Do NOT filter using patient.is_active here.
+       *
+       * Existing appointments belonging to patients
+       * who later become inactive must remain visible.
+       */
+
+      setAppointments(response.data);
+    } catch (error) {
+      console.error(
+        "Error fetching appointments:",
+        error
+      );
+
+      setAppointments([]);
+
+      setMessage(
+        "Unable to load appointments."
+      );
+    }
+  };
+
+
+  // =====================================================
+  // SIDEBAR RESET
+  // =====================================================
+
   useEffect(() => {
-    fetchAppointments();
+    if (location.state?.resetSection) {
+      setSelectedAction(null);
+
+      setAppointments([]);
+      setFilterDate("");
+      setAppointmentTypeFilter("ALL");
+      setMessage("");
+
+      setEditingAppointment(null);
+      setEditDate("");
+      setEditTime("");
+      setEditAvailableSlots([]);
+      setEditSlotMessage("");
+
+      setSearchType("patient_id");
+      setSearchValue("");
+      setPatient(null);
+      setPatientSearchResults([]);
+
+      setSelectedDepartment("");
+      setDoctors([]);
+      setSelectedDoctor("");
+
+      setAppointmentType("WALK_IN");
+      setAppointmentDate("");
+      setAppointmentTime("");
+
+      setAvailableSlots([]);
+      setSlotMessage("");
+      setLoadingSlot(false);
+
+      setPaymentStatus("UNPAID");
+      setFeePreview(null);
+
+      setBookingResult(null);
+      setShowBookingSuccess(false);
+    }
+  }, [location.state?.resetKey]);
+
+  // =====================================================
+  // INITIAL LOAD
+  // =====================================================
+
+  useEffect(() => {
+    fetchDepartments();
   }, []);
 
   useEffect(() => {
     if (selectedAction === "book") {
-      fetchDepartments();
-
       setAppointmentType("WALK_IN");
       setAppointmentDate(getToday());
+    }
+
+    if (selectedAction === "view") {
+      setFilterDate("");
+      setAppointmentTypeFilter("ALL");
+
+      fetchAppointments("upcoming");
+    }
+
+    if (selectedAction === "log") {
+      setFilterDate("");
+      setAppointmentTypeFilter("ALL");
+
+      fetchAppointments("log");
     }
   }, [selectedAction]);
 
@@ -132,62 +354,100 @@ function Appointments() {
           ? "Please enter a Patient Name."
           : "Please enter a Mobile Number."
       );
+
       return;
     }
 
     try {
       setMessage("");
+
       setPatient(null);
       setPatientSearchResults([]);
+
+      setSelectedDepartment("");
+      setSelectedDoctor("");
+      setDoctors([]);
+
+      setAppointmentTime("");
+      setAvailableSlots([]);
+      setSlotMessage("");
+
+      setFeePreview(null);
+
       setBookingResult(null);
       setShowBookingSuccess(false);
-      setFeePreview(null);
 
       const response = await api.get(
         "receptionist/patients/",
         {
           params: {
-            [searchType]: searchValue.trim(),
+            [searchType]:
+              searchValue.trim(),
           },
         }
       );
 
-      if (response.data.length === 0) {
-        setMessage("Patient not found.");
+      if (
+        response.data.length === 0
+      ) {
+        setMessage(
+          "Patient not found."
+        );
+
         return;
       }
 
-      if (searchType === "patient_id") {
-        const foundPatient = response.data[0];
+      if (
+        searchType === "patient_id"
+      ) {
+        const foundPatient =
+          response.data[0];
 
         if (!foundPatient.is_active) {
+          setPatientSearchResults(
+            response.data
+          );
+
           setMessage(
             "This patient is inactive and cannot book an appointment."
           );
-          setPatientSearchResults(response.data);
+
           return;
         }
 
         setPatient(foundPatient);
+
         return;
       }
 
-      setPatientSearchResults(response.data);
+      setPatientSearchResults(
+        response.data
+      );
     } catch (error) {
       console.error(
         "Error searching patient:",
         error
       );
 
-      setMessage("Unable to search patient.");
+      setMessage(
+        "Unable to search patient."
+      );
     }
   };
 
-  const handleSelectPatient = (selectedPatient) => {
+  const handleSelectPatient = (
+    selectedPatient
+  ) => {
+    /*
+     * Inactive patients cannot make NEW appointments.
+     * Existing appointments remain untouched.
+     */
+
     if (!selectedPatient.is_active) {
       setMessage(
         "This patient is inactive and cannot book an appointment."
       );
+
       return;
     }
 
@@ -196,11 +456,13 @@ function Appointments() {
     setMessage("");
 
     setSelectedDepartment("");
-    setDoctors([]);
     setSelectedDoctor("");
+    setDoctors([]);
 
     setAppointmentTime("");
+    setAvailableSlots([]);
     setSlotMessage("");
+
     setFeePreview(null);
   };
 
@@ -208,20 +470,27 @@ function Appointments() {
   // DEPARTMENT CHANGE
   // =====================================================
 
-  const handleDepartmentChange = async (e) => {
-    const departmentId = e.target.value;
+  const handleDepartmentChange = async (
+    e
+  ) => {
+    const departmentId =
+      e.target.value;
 
-    setSelectedDepartment(departmentId);
+    setSelectedDepartment(
+      departmentId
+    );
+
     setSelectedDoctor("");
     setDoctors([]);
 
     setAppointmentTime("");
+    setAvailableSlots([]);
     setSlotMessage("");
+
+    setFeePreview(null);
 
     setBookingResult(null);
     setShowBookingSuccess(false);
-
-    setFeePreview(null);
 
     if (!departmentId) {
       return;
@@ -234,14 +503,17 @@ function Appointments() {
         "receptionist/doctors/",
         {
           params: {
-            department: departmentId,
+            department:
+              departmentId,
           },
         }
       );
 
       setDoctors(response.data);
 
-      if (response.data.length === 0) {
+      if (
+        response.data.length === 0
+      ) {
         setMessage(
           "No doctors available in this department."
         );
@@ -252,19 +524,25 @@ function Appointments() {
         error
       );
 
-      setMessage("Unable to load doctors.");
+      setMessage(
+        "Unable to load doctors."
+      );
     }
   };
 
-  const selectedDoctorDetails = doctors.find(
-    (doctor) =>
-      String(doctor.id) === String(selectedDoctor)
-  );
+  const selectedDoctorDetails =
+    doctors.find(
+      (doctor) =>
+        String(doctor.id) ===
+        String(selectedDoctor)
+    );
 
-  const selectedDepartmentDetails = departments.find(
-    (department) =>
-      String(department.id) === String(selectedDepartment)
-  );
+  const selectedDepartmentDetails =
+    departments.find(
+      (department) =>
+        String(department.id) ===
+        String(selectedDepartment)
+    );
 
   // =====================================================
   // FEE PREVIEW
@@ -276,6 +554,7 @@ function Appointments() {
   ) => {
     if (!patientId || !doctorId) {
       setFeePreview(null);
+
       return;
     }
 
@@ -302,21 +581,27 @@ function Appointments() {
   };
 
   // =====================================================
-  // NEXT AVAILABLE SLOT
+  // WALK-IN NEXT SLOT
   // =====================================================
 
   const fetchNextSlot = async (
     doctorId,
     selectedDate
   ) => {
-    if (!doctorId || !selectedDate) {
+    if (
+      !doctorId ||
+      !selectedDate
+    ) {
       setAppointmentTime("");
+
       return;
     }
 
     try {
       setLoadingSlot(true);
+
       setAppointmentTime("");
+      setAvailableSlots([]);
       setSlotMessage("");
 
       const response = await api.get(
@@ -329,13 +614,17 @@ function Appointments() {
         }
       );
 
-      if (response.data.next_slot) {
-        setAppointmentTime(
+      if (
+        response.data.next_slot
+      ) {
+        const slot = formatTime(
           response.data.next_slot
         );
 
+        setAppointmentTime(slot);
+
         setSlotMessage(
-          `Next available slot: ${response.data.next_slot}`
+          `Next available slot: ${slot}`
         );
       } else {
         setAppointmentTime("");
@@ -362,15 +651,89 @@ function Appointments() {
   };
 
   // =====================================================
+  // PRIOR BOOKING AVAILABLE SLOTS
+  // =====================================================
+
+  const fetchAvailableSlots = async (
+    doctorId,
+    selectedDate
+  ) => {
+    if (
+      !doctorId ||
+      !selectedDate
+    ) {
+      setAvailableSlots([]);
+      setAppointmentTime("");
+
+      return;
+    }
+
+    try {
+      setLoadingSlot(true);
+
+      setAvailableSlots([]);
+      setAppointmentTime("");
+      setSlotMessage("");
+
+      const response = await api.get(
+        "receptionist/available-slots/",
+        {
+          params: {
+            doctor: doctorId,
+            date: selectedDate,
+          },
+        }
+      );
+
+      const slots =
+        response.data.available_slots ||
+        [];
+
+      setAvailableSlots(slots);
+
+      if (slots.length === 0) {
+        setSlotMessage(
+          response.data.message ||
+            "All appointment slots are filled."
+        );
+      } else {
+        setSlotMessage(
+          "Select any available appointment time."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Error fetching available slots:",
+        error
+      );
+
+      setAvailableSlots([]);
+      setAppointmentTime("");
+
+      setSlotMessage(
+        "Unable to load available appointment slots."
+      );
+    } finally {
+      setLoadingSlot(false);
+    }
+  };
+
+  // =====================================================
   // DOCTOR CHANGE
   // =====================================================
 
-  const handleDoctorChange = async (e) => {
-    const doctorId = e.target.value;
+  const handleDoctorChange = async (
+    e
+  ) => {
+    const doctorId =
+      e.target.value;
 
-    setSelectedDoctor(doctorId);
+    setSelectedDoctor(
+      doctorId
+    );
 
     setAppointmentTime("");
+    setAvailableSlots([]);
     setSlotMessage("");
 
     setBookingResult(null);
@@ -378,15 +741,33 @@ function Appointments() {
 
     setFeePreview(null);
 
-    if (doctorId && patient) {
+    if (
+      doctorId &&
+      patient
+    ) {
       await fetchFeePreview(
         patient.id,
         doctorId
       );
     }
 
-    if (doctorId && appointmentDate) {
+    if (
+      !doctorId ||
+      !appointmentDate
+    ) {
+      return;
+    }
+
+    if (
+      appointmentType ===
+      "WALK_IN"
+    ) {
       await fetchNextSlot(
+        doctorId,
+        appointmentDate
+      );
+    } else {
+      await fetchAvailableSlots(
         doctorId,
         appointmentDate
       );
@@ -394,353 +775,634 @@ function Appointments() {
   };
 
   // =====================================================
-  // APPOINTMENT TYPE CHANGE
+  // APPOINTMENT TYPE
   // =====================================================
 
-  const handleAppointmentTypeChange = async (e) => {
-    const type = e.target.value;
+  const handleAppointmentTypeChange =
+    async (e) => {
+      const type =
+        e.target.value;
 
-    setAppointmentType(type);
-    setAppointmentTime("");
-    setSlotMessage("");
+      setAppointmentType(type);
 
-    setBookingResult(null);
-    setShowBookingSuccess(false);
+      setAppointmentTime("");
+      setAvailableSlots([]);
+      setSlotMessage("");
 
-    if (type === "WALK_IN") {
-      const today = getToday();
+      setBookingResult(null);
+      setShowBookingSuccess(false);
 
-      setAppointmentDate(today);
+      if (
+        type === "WALK_IN"
+      ) {
+        const today =
+          getToday();
 
-      if (selectedDoctor) {
-        await fetchNextSlot(
-          selectedDoctor,
-          today
-        );
+        setAppointmentDate(today);
+
+        if (selectedDoctor) {
+          await fetchNextSlot(
+            selectedDoctor,
+            today
+          );
+        }
+      } else {
+        setAppointmentDate("");
       }
-    } else {
-      setAppointmentDate("");
-    }
-  };
+    };
 
   // =====================================================
-  // PRIOR BOOKING DATE CHANGE
+  // PRIOR BOOKING DATE
   // =====================================================
 
-  const handlePriorDateChange = async (e) => {
-    const selectedDate = e.target.value;
+  const handlePriorDateChange =
+    async (e) => {
+      const selectedDate =
+        e.target.value;
 
-    setAppointmentDate(selectedDate);
-    setAppointmentTime("");
-    setSlotMessage("");
-
-    setBookingResult(null);
-    setShowBookingSuccess(false);
-
-    if (selectedDoctor && selectedDate) {
-      await fetchNextSlot(
-        selectedDoctor,
+      setAppointmentDate(
         selectedDate
       );
-    }
-  };
+
+      setAppointmentTime("");
+      setAvailableSlots([]);
+      setSlotMessage("");
+
+      setBookingResult(null);
+      setShowBookingSuccess(false);
+
+      if (
+        selectedDoctor &&
+        selectedDate
+      ) {
+        await fetchAvailableSlots(
+          selectedDoctor,
+          selectedDate
+        );
+      }
+    };
 
   // =====================================================
   // BOOK APPOINTMENT
   // =====================================================
 
-  const handleBookAppointment = async (e) => {
-    e.preventDefault();
-
-    setMessage("");
-    setBookingResult(null);
-    setShowBookingSuccess(false);
-
-    if (!patient) {
-      setMessage(
-        "Please search and select a patient first."
-      );
-      return;
-    }
-
-    if (!selectedDepartment) {
-      setMessage(
-        "Please select a department."
-      );
-      return;
-    }
-
-    if (!selectedDoctor) {
-      setMessage(
-        "Please select a doctor."
-      );
-      return;
-    }
-
-    if (!appointmentDate) {
-      setMessage(
-        "Please select an appointment date."
-      );
-      return;
-    }
-
-    if (!appointmentTime) {
-      setMessage(
-        slotMessage ||
-          "All appointment slots are filled."
-      );
-      return;
-    }
-
-    if (paymentStatus !== "PAID") {
-      setMessage(
-        "Booking is not done (payment not done)."
-      );
-      return;
-    }
-
-    try {
-      const response = await api.post(
-        "receptionist/paid-booking/",
-        {
-          patient: patient.id,
-          doctor: Number(selectedDoctor),
-          appointment_type: appointmentType,
-          appointment_date: appointmentDate,
-          appointment_time: appointmentTime,
-          payment_status: paymentStatus,
-        }
-      );
-
-      setBookingResult(response.data);
+  const handleBookAppointment =
+    async (e) => {
+      e.preventDefault();
 
       setMessage("");
+      setBookingResult(null);
+      setShowBookingSuccess(false);
 
-      setShowBookingSuccess(true);
-
-      await fetchAppointments();
-
-      await fetchNextSlot(
-        selectedDoctor,
-        appointmentDate
-      );
-    } catch (error) {
-      console.error(
-        "Error booking appointment:",
-        error
-      );
-
-      const data = error.response?.data;
-
-      if (data) {
-        const errorMessages = [];
-
-        Object.values(data).forEach((value) => {
-          if (Array.isArray(value)) {
-            errorMessages.push(...value);
-          } else if (
-            typeof value === "string"
-          ) {
-            errorMessages.push(value);
-          }
-        });
-
+      if (!patient) {
         setMessage(
-          errorMessages.length > 0
-            ? errorMessages.join(" ")
-            : "Unable to book appointment."
+          "Please search and select a patient first."
         );
-      } else {
-        setMessage(
-          "Unable to book appointment."
-        );
+
+        return;
       }
 
-      await fetchNextSlot(
-        selectedDoctor,
-        appointmentDate
+      if (!patient.is_active) {
+        setMessage(
+          "This patient is inactive and cannot book an appointment."
+        );
+
+        return;
+      }
+
+      if (!selectedDepartment) {
+        setMessage(
+          "Please select a department."
+        );
+
+        return;
+      }
+
+      if (!selectedDoctor) {
+        setMessage(
+          "Please select a doctor."
+        );
+
+        return;
+      }
+
+      if (!appointmentDate) {
+        setMessage(
+          "Please select an appointment date."
+        );
+
+        return;
+      }
+
+      /*
+       * Payment check intentionally comes BEFORE
+       * appointment-time validation.
+       */
+
+      if (
+        paymentStatus !== "PAID"
+      ) {
+        setMessage(
+          "Booking is not done (payment not done)."
+        );
+
+        return;
+      }
+
+      if (!appointmentTime) {
+        setMessage(
+          slotMessage ||
+            "Please select an available appointment time."
+        );
+
+        return;
+      }
+
+      try {
+        const response =
+          await api.post(
+            "receptionist/paid-booking/",
+            {
+              patient:
+                patient.id,
+
+              doctor:
+                Number(
+                  selectedDoctor
+                ),
+
+              appointment_type:
+                appointmentType,
+
+              appointment_date:
+                appointmentDate,
+
+              appointment_time:
+                appointmentTime,
+
+              payment_status:
+                paymentStatus,
+            }
+          );
+
+        setBookingResult(
+          response.data
+        );
+
+        setMessage("");
+
+        setShowBookingSuccess(
+          true
+        );
+      } catch (error) {
+        console.error(
+          "Error booking appointment:",
+          error
+        );
+
+        setMessage(
+          getApiErrorMessage(
+            error,
+            "Unable to book appointment."
+          )
+        );
+
+        if (
+          selectedDoctor &&
+          appointmentDate
+        ) {
+          if (
+            appointmentType ===
+            "WALK_IN"
+          ) {
+            await fetchNextSlot(
+              selectedDoctor,
+              appointmentDate
+            );
+          } else {
+            await fetchAvailableSlots(
+              selectedDoctor,
+              appointmentDate
+            );
+          }
+        }
+      }
+    };
+
+  // =====================================================
+  // CURRENT LIST REFRESH
+  // =====================================================
+
+  const refreshCurrentAppointmentList =
+    async (
+      dateOverride = filterDate,
+      typeOverride =
+        appointmentTypeFilter
+    ) => {
+      const viewType =
+        selectedAction === "log"
+          ? "log"
+          : "upcoming";
+
+      await fetchAppointments(
+        viewType,
+        dateOverride,
+        typeOverride
       );
-    }
-  };
+    };
 
   // =====================================================
-  // FILTER
+  // DATE FILTER
   // =====================================================
 
-  const handleDateFilter = async () => {
-    if (!filterDate) {
-      setMessage("Please select a date.");
+  const handleDateFilter =
+    async () => {
+      if (!filterDate) {
+        setMessage(
+          "Please select a date."
+        );
+
+        return;
+      }
+
+      await refreshCurrentAppointmentList();
+    };
+
+  const clearFilter =
+    async () => {
+      setFilterDate("");
+      setMessage("");
+
+      await refreshCurrentAppointmentList(
+        "",
+        appointmentTypeFilter
+      );
+    };
+
+  // =====================================================
+  // TYPE FILTER
+  // =====================================================
+
+  const handleTypeFilterChange =
+    async (type) => {
+      setAppointmentTypeFilter(
+        type
+      );
+
+      await refreshCurrentAppointmentList(
+        filterDate,
+        type
+      );
+    };
+
+  // =====================================================
+  // CANCEL
+  // =====================================================
+
+  const handleCancelAppointment =
+    async (appointmentId) => {
+      const confirmed =
+        window.confirm(
+          "Are you sure you want to cancel this appointment?"
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        setMessage("");
+
+        await api.patch(
+          `receptionist/appointments/${appointmentId}/`,
+          {
+            status:
+              "CANCELLED",
+          }
+        );
+
+        setMessage(
+          "Appointment cancelled successfully."
+        );
+
+        await refreshCurrentAppointmentList();
+      } catch (error) {
+        console.error(
+          "Error cancelling appointment:",
+          error
+        );
+
+        setMessage(
+          getApiErrorMessage(
+            error,
+            "Unable to cancel appointment."
+          )
+        );
+      }
+    };
+
+  // =====================================================
+  // EDIT AVAILABLE SLOTS
+  // =====================================================
+
+  const fetchEditSlots = async (
+    doctorId,
+    date,
+    appointmentId
+  ) => {
+    if (
+      !doctorId ||
+      !date
+    ) {
+      setEditAvailableSlots([]);
+
       return;
     }
 
     try {
-      setMessage("");
+      setLoadingEditSlots(true);
+
+      setEditSlotMessage("");
 
       const response = await api.get(
-        "receptionist/appointments/",
+        "receptionist/available-slots/",
         {
           params: {
-            date: filterDate,
+            doctor: doctorId,
+            date,
+            appointment:
+              appointmentId,
           },
         }
       );
 
-      setAppointments(response.data);
+      const slots =
+        response.data.available_slots ||
+        [];
+
+      setEditAvailableSlots(
+        slots
+      );
+
+      if (
+        slots.length === 0
+      ) {
+        setEditSlotMessage(
+          "No available appointment slots for this date."
+        );
+      }
     } catch (error) {
       console.error(
-        "Error filtering appointments:",
+        "Error loading edit slots:",
         error
       );
 
-      setMessage(
-        "Unable to filter appointments."
+      setEditAvailableSlots([]);
+
+      setEditSlotMessage(
+        "Unable to load available slots."
       );
+    } finally {
+      setLoadingEditSlots(false);
     }
   };
 
-  const clearFilter = async () => {
-    setFilterDate("");
-    setMessage("");
-
-    await fetchAppointments();
-  };
-
   // =====================================================
-  // APPOINTMENT TYPE FILTER
+  // EDIT APPOINTMENT
   // =====================================================
 
-  const filteredAppointments =
-    appointmentTypeFilter === "ALL"
-      ? appointments
-      : appointments.filter(
-          (appointment) =>
-            appointment.appointment_type ===
-            appointmentTypeFilter
-        );
-
-  // =====================================================
-  // CANCEL APPOINTMENT
-  // =====================================================
-
-  const handleCancelAppointment = async (
-    appointmentId
-  ) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this appointment?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
+  const handleEditAppointment =
+    async (appointment) => {
       setMessage("");
 
-      await api.patch(
-        `receptionist/appointments/${appointmentId}/`,
-        {
-          status: "CANCELLED",
-        }
+      setEditingAppointment(
+        appointment
       );
 
-      setMessage(
-        "Appointment cancelled successfully."
+      setEditDate(
+        appointment.appointment_date
       );
 
-      if (filterDate) {
-        await handleDateFilter();
-      } else {
-        await fetchAppointments();
+      setEditTime(
+        formatTime(
+          appointment.appointment_time
+        )
+      );
+
+      setEditAvailableSlots([]);
+      setEditSlotMessage("");
+
+      await fetchEditSlots(
+        appointment.doctor,
+        appointment.appointment_date,
+        appointment.id
+      );
+    };
+
+  const handleEditDateChange =
+    async (e) => {
+      const date =
+        e.target.value;
+
+      setEditDate(date);
+
+      setEditTime("");
+
+      setEditAvailableSlots([]);
+      setEditSlotMessage("");
+
+      if (
+        editingAppointment &&
+        date
+      ) {
+        await fetchEditSlots(
+          editingAppointment.doctor,
+          date,
+          editingAppointment.id
+        );
       }
-    } catch (error) {
-      console.error(
-        "Error cancelling appointment:",
-        error
-      );
+    };
 
-      const data = error.response?.data;
+  const handleUpdateAppointment =
+    async (e) => {
+      e.preventDefault();
 
-      if (data) {
-        const errorMessages = [];
+      if (!editingAppointment) {
+        return;
+      }
 
-        Object.values(data).forEach((value) => {
-          if (Array.isArray(value)) {
-            errorMessages.push(...value);
-          } else if (
-            typeof value === "string"
-          ) {
-            errorMessages.push(value);
+      if (!editDate) {
+        setMessage(
+          "Please select an appointment date."
+        );
+
+        return;
+      }
+
+      if (!editTime) {
+        setMessage(
+          "Please select an available appointment time."
+        );
+
+        return;
+      }
+
+      try {
+        setMessage("");
+
+        await api.patch(
+          `receptionist/appointments/${editingAppointment.id}/`,
+          {
+            appointment_date:
+              editDate,
+
+            appointment_time:
+              editTime,
           }
-        });
+        );
+
+        setEditingAppointment(
+          null
+        );
+
+        setEditAvailableSlots(
+          []
+        );
+
+        setEditSlotMessage("");
 
         setMessage(
-          errorMessages.length > 0
-            ? errorMessages.join(" ")
-            : "Unable to cancel appointment."
+          "Appointment updated successfully."
         );
-      } else {
+
+        await refreshCurrentAppointmentList();
+      } catch (error) {
+        console.error(
+          "Error updating appointment:",
+          error
+        );
+
         setMessage(
-          "Unable to cancel appointment."
+          getApiErrorMessage(
+            error,
+            "Unable to update appointment."
+          )
+        );
+
+        await fetchEditSlots(
+          editingAppointment.doctor,
+          editDate,
+          editingAppointment.id
         );
       }
-    }
-  };
+    };
 
   // =====================================================
-  // RESET
+  // RESET BOOKING
   // =====================================================
 
-  const resetBookingForm = () => {
-    setSearchType("patient_id");
-    setSearchValue("");
-    setPatient(null);
-    setPatientSearchResults([]);
+  const resetBookingForm =
+    () => {
+      setSearchType(
+        "patient_id"
+      );
 
-    setSelectedDepartment("");
-    setDoctors([]);
-    setSelectedDoctor("");
+      setSearchValue("");
 
-    setAppointmentType("WALK_IN");
-    setAppointmentDate("");
-    setAppointmentTime("");
+      setPatient(null);
 
-    setPaymentStatus("UNPAID");
+      setPatientSearchResults(
+        []
+      );
 
-    setBookingResult(null);
-    setShowBookingSuccess(false);
+      setSelectedDepartment(
+        ""
+      );
 
-    setSlotMessage("");
+      setDoctors([]);
 
-    setFeePreview(null);
-  };
+      setSelectedDoctor("");
 
-  const goBack = async () => {
+      setAppointmentType(
+        "WALK_IN"
+      );
+
+      setAppointmentDate("");
+
+      setAppointmentTime("");
+
+      setAvailableSlots([]);
+
+      setSlotMessage("");
+
+      setLoadingSlot(false);
+
+      setPaymentStatus(
+        "UNPAID"
+      );
+
+      setFeePreview(null);
+
+      setBookingResult(null);
+
+      setShowBookingSuccess(
+        false
+      );
+    };
+
+  // =====================================================
+  // BACK
+  // =====================================================
+
+  const goBack = () => {
     setSelectedAction(null);
+
     setFilterDate("");
-    setAppointmentTypeFilter("ALL");
+
+    setAppointmentTypeFilter(
+      "ALL"
+    );
+
     setMessage("");
+
+    setEditingAppointment(
+      null
+    );
+
+    setEditDate("");
+    setEditTime("");
+
+    setEditAvailableSlots(
+      []
+    );
+
+    setEditSlotMessage("");
 
     resetBookingForm();
 
-    await fetchAppointments();
+    setAppointments([]);
   };
 
-  // =====================================================
-  // BACK FROM SUCCESS PAGE
-  // =====================================================
+  const backToBookingPage =
+    () => {
+      setShowBookingSuccess(
+        false
+      );
 
-  const backToBookingPage = async () => {
-    setShowBookingSuccess(false);
-    setBookingResult(null);
-    setMessage("");
+      setBookingResult(null);
 
-    resetBookingForm();
+      setMessage("");
 
-    setAppointmentType("WALK_IN");
-    setAppointmentDate(getToday());
+      resetBookingForm();
 
-    await fetchAppointments();
-  };
+      setAppointmentType(
+        "WALK_IN"
+      );
+
+      setAppointmentDate(
+        getToday()
+      );
+    };
 
   // =====================================================
   // MAIN MENU
@@ -753,32 +1415,64 @@ function Appointments() {
           Appointments
         </h2>
 
-        <div className="d-flex flex-wrap gap-3">
-          <button
-            className="btn text-white p-4"
-            style={{
-              backgroundColor: "#1976A3",
-              width: "250px",
-            }}
-            onClick={() =>
-              setSelectedAction("book")
-            }
-          >
-            Search Patient & Book Appointment
-          </button>
+        <div className="row g-3">
+          <div className="col-12 col-md-6 col-xl-4">
+            <button
+              type="button"
+              className="btn text-white w-100 h-100 p-4"
+              style={{
+                backgroundColor:
+                  "#1976A3",
+                minHeight: "90px",
+              }}
+              onClick={() =>
+                setSelectedAction(
+                  "book"
+                )
+              }
+            >
+              Book Appointments
+            </button>
+          </div>
 
-          <button
-            className="btn text-white p-4"
-            style={{
-              backgroundColor: "#1976A3",
-              width: "250px",
-            }}
-            onClick={() =>
-              setSelectedAction("view")
-            }
-          >
-            View and Edit Appointments
-          </button>
+          <div className="col-12 col-md-6 col-xl-4">
+            <button
+              type="button"
+              className="btn text-white w-100 h-100 p-4"
+              style={{
+                backgroundColor:
+                  "#1976A3",
+                minHeight: "90px",
+              }}
+              onClick={() =>
+                setSelectedAction(
+                  "view"
+                )
+              }
+            >
+              View and Edit
+              Appointments
+            </button>
+          </div>
+
+          <div className="col-12 col-md-6 col-xl-4">
+            <button
+              type="button"
+              className="btn text-white w-100 h-100 p-4"
+              style={{
+                backgroundColor:
+                  "#1976A3",
+                minHeight: "90px",
+              }}
+              onClick={() =>
+                setSelectedAction(
+                  "log"
+                )
+              }
+            >
+              Appointment Log
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -793,113 +1487,172 @@ function Appointments() {
     showBookingSuccess &&
     bookingResult
   ) {
+    const bookedAppointment =
+      bookingResult.appointment;
+
+    const bill =
+      bookingResult.bill;
+
     return (
       <div>
-        <button
-          type="button"
-          className="btn btn-secondary mb-3"
-          onClick={backToBookingPage}
-        >
-          ← Back
-        </button>
+        <BackButton
+          onClick={
+            backToBookingPage
+          }
+        />
 
-        <div className="card">
+        <div
+          className="card shadow-sm"
+          style={{
+            maxWidth: "800px",
+          }}
+        >
           <div className="card-body">
             <h4 className="text-success mb-4">
-              Appointment Booked Successfully
+              Appointment Booked
+              Successfully
             </h4>
 
-            <h5>Patient Details</h5>
+            <h5>
+              Patient Details
+            </h5>
 
-            <p>
-              <strong>Patient ID:</strong>{" "}
-              {patient?.patient_id}
-            </p>
+            <DetailRow
+              label="Patient ID"
+              value={
+                bookedAppointment.patient_id ||
+                patient?.patient_id
+              }
+            />
 
-            <p>
-              <strong>Patient Name:</strong>{" "}
-              {patient?.patient_name}
-            </p>
+            <DetailRow
+              label="Patient Name"
+              value={
+                bookedAppointment.patient_name ||
+                patient?.patient_name
+              }
+            />
 
-            <p>
-              <strong>Mobile Number:</strong>{" "}
-              {patient?.mobile_number}
-            </p>
-
-            <hr />
-
-            <h5>Doctor Details</h5>
-
-            <p>
-              <strong>Doctor Name:</strong>{" "}
-              {selectedDoctorDetails?.doctor_name}
-            </p>
-
-            <p>
-              <strong>Department:</strong>{" "}
-              {selectedDepartmentDetails?.name}
-            </p>
+            <DetailRow
+              label="Mobile Number"
+              value={
+                patient?.mobile_number
+              }
+            />
 
             <hr />
 
-            <h5>Appointment Details</h5>
+            <h5>
+              Doctor Details
+            </h5>
 
-            <p>
-              <strong>Appointment ID:</strong>{" "}
-              {bookingResult.appointment.id}
-            </p>
+            <DetailRow
+              label="Doctor Name"
+              value={
+                bookedAppointment.doctor_name ||
+                selectedDoctorDetails?.doctor_name
+              }
+            />
 
-            <p>
-              <strong>Token Number:</strong>{" "}
-              {bookingResult.appointment.token_number}
-            </p>
+            <DetailRow
+              label="Department"
+              value={
+                bookedAppointment.department_name ||
+                selectedDepartmentDetails?.name
+              }
+            />
 
-            <p>
-              <strong>Appointment Type:</strong>{" "}
-              {bookingResult.appointment.appointment_type}
-            </p>
+            <hr />
 
-            <p>
-              <strong>Date:</strong>{" "}
-              {bookingResult.appointment.appointment_date}
-            </p>
+            <h5>
+              Appointment Details
+            </h5>
 
-            <p>
-              <strong>Time:</strong>{" "}
-              {bookingResult.appointment.appointment_time?.slice(
-                0,
-                5
+            <DetailRow
+              label="Appointment ID"
+              value={
+                bookedAppointment.appointment_display_id ||
+                `APT${String(
+                  bookedAppointment.id
+                ).padStart(4, "0")}`
+              }
+            />
+
+            <DetailRow
+              label="Token Number"
+              value={
+                bookedAppointment.token_number
+              }
+            />
+
+            <DetailRow
+              label="Appointment Type"
+              value={formatAppointmentType(
+                bookedAppointment.appointment_type
               )}
-            </p>
+            />
 
-            <p>
-              <strong>Status:</strong>{" "}
-              {bookingResult.appointment.status}
-            </p>
+            <DetailRow
+              label="Date"
+              value={
+                bookedAppointment.appointment_date
+              }
+            />
+
+            <DetailRow
+              label="Time"
+              value={formatTime(
+                bookedAppointment.appointment_time
+              )}
+            />
+
+            <DetailRow
+              label="Status"
+              value={
+                bookedAppointment.status
+              }
+            />
 
             <hr />
 
-            <h5>Consultation Bill</h5>
+            <h5>
+              Consultation Bill
+            </h5>
 
-            <p>
-              <strong>Registration Fee:</strong>{" "}
-              ₹{bookingResult.bill.registration_fee}
-            </p>
+            <DetailRow
+              label="Bill ID"
+              value={
+                bill.bill_display_id ||
+                (bill.id
+                  ? `CB${String(
+                      bill.id
+                    ).padStart(
+                      4,
+                      "0"
+                    )}`
+                  : "-")
+              }
+            />
 
-            <p>
-              <strong>Consultation Fee:</strong>{" "}
-              ₹{bookingResult.bill.consultation_fee}
-            </p>
+            <DetailRow
+              label="Registration Fee"
+              value={`₹${bill.registration_fee}`}
+            />
 
-            <p>
-              <strong>Total Amount:</strong>{" "}
-              ₹{bookingResult.bill.total_amount}
-            </p>
+            <DetailRow
+              label="Consultation Fee"
+              value={`₹${bill.consultation_fee}`}
+            />
 
-            <p>
-              <strong>Payment Status:</strong>{" "}
-              PAID
-            </p>
+            <DetailRow
+              label="Total Amount"
+              value={`₹${bill.total_amount}`}
+            />
+
+            <DetailRow
+              label="Payment Status"
+              value="PAID"
+            />
           </div>
         </div>
       </div>
@@ -907,16 +1660,21 @@ function Appointments() {
   }
 
   // =====================================================
-  // BOOK APPOINTMENT PAGE
+  // BOOK APPOINTMENT
   // =====================================================
 
-  if (selectedAction === "book") {
+  if (
+    selectedAction === "book"
+  ) {
     return (
       <div>
-        <BackButton onClick={goBack} />
+        <BackButton
+          onClick={goBack}
+        />
 
         <h3>
-          Search Patient & Book Appointment
+          Search Patient & Book
+          Appointment
         </h3>
 
         {message && (
@@ -925,6 +1683,8 @@ function Appointments() {
           </div>
         )}
 
+        {/* PATIENT SEARCH */}
+
         <div className="card mt-4">
           <div className="card-body">
             <h5 className="mb-3">
@@ -932,7 +1692,7 @@ function Appointments() {
             </h5>
 
             <div className="row g-2">
-              <div className="col-md-3">
+              <div className="col-12 col-md-3">
                 <select
                   className="form-select"
                   value={searchType}
@@ -941,10 +1701,43 @@ function Appointments() {
                       e.target.value
                     );
 
-                    setSearchValue("");
+                    setSearchValue(
+                      ""
+                    );
+
                     setPatient(null);
-                    setPatientSearchResults([]);
-                    setFeePreview(null);
+
+                    setPatientSearchResults(
+                      []
+                    );
+
+                    setSelectedDepartment(
+                      ""
+                    );
+
+                    setSelectedDoctor(
+                      ""
+                    );
+
+                    setDoctors([]);
+
+                    setFeePreview(
+                      null
+                    );
+
+                    setAppointmentTime(
+                      ""
+                    );
+
+                    setAvailableSlots(
+                      []
+                    );
+
+                    setSlotMessage(
+                      ""
+                    );
+
+                    setMessage("");
                   }}
                 >
                   <option value="patient_id">
@@ -961,27 +1754,37 @@ function Appointments() {
                 </select>
               </div>
 
-              <div className="col-md-5">
+              <div className="col-12 col-md-6">
                 <input
                   type="text"
                   className="form-control"
+                  value={searchValue}
                   placeholder={
-                    searchType === "patient_id"
+                    searchType ===
+                    "patient_id"
                       ? "Enter Patient ID"
-                      : searchType === "patient_name"
+                      : searchType ===
+                        "patient_name"
                       ? "Enter Patient Name"
                       : "Enter Mobile Number"
                   }
-                  value={searchValue}
                   onChange={(e) =>
                     setSearchValue(
                       e.target.value
                     )
                   }
+                  onKeyDown={(e) => {
+                    if (
+                      e.key ===
+                      "Enter"
+                    ) {
+                      handleSearchPatient();
+                    }
+                  }}
                 />
               </div>
 
-              <div className="col-md-4">
+              <div className="col-12 col-md-3 d-grid">
                 <button
                   type="button"
                   className="btn text-white"
@@ -1000,7 +1803,10 @@ function Appointments() {
           </div>
         </div>
 
-        {patientSearchResults.length > 0 && (
+        {/* PATIENT SEARCH RESULTS */}
+
+        {patientSearchResults.length >
+          0 && (
           <div className="card mt-4">
             <div className="card-body">
               <h5 className="mb-3">
@@ -1008,48 +1814,115 @@ function Appointments() {
               </h5>
 
               <div className="table-responsive">
-                <table className="table table-bordered align-middle">
+                <table className="table table-bordered table-hover align-middle">
                   <thead>
                     <tr>
-                      <th>Patient ID</th>
+                      <th>
+                        Patient ID
+                      </th>
+
                       <th>Name</th>
-                      <th>Date of Birth</th>
+
+                      <th>
+                        Date of Birth
+                      </th>
+
                       <th>Gender</th>
-                      <th>Mobile Number</th>
-                      <th>Blood Group</th>
+
+                      <th>
+                        Mobile Number
+                      </th>
+
+                      <th>
+                        Blood Group
+                      </th>
+
                       <th>Status</th>
-                      <th>Action</th>
+
+                      <th>
+                        Action
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {patientSearchResults.map(
-                      (searchPatient) => (
-                        <tr key={searchPatient.id}>
-                          <td>{searchPatient.patient_id}</td>
-                          <td>{searchPatient.patient_name}</td>
-                          <td>{searchPatient.date_of_birth}</td>
-                          <td>{searchPatient.gender}</td>
-                          <td>{searchPatient.mobile_number}</td>
-                          <td>{searchPatient.blood_group || "-"}</td>
+                      (
+                        searchPatient
+                      ) => (
+                        <tr
+                          key={
+                            searchPatient.id
+                          }
+                        >
                           <td>
-                            {searchPatient.is_active
-                              ? "Active"
-                              : "Inactive"}
+                            {
+                              searchPatient.patient_id
+                            }
                           </td>
+
+                          <td>
+                            {
+                              searchPatient.patient_name
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              searchPatient.date_of_birth
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              searchPatient.gender
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              searchPatient.mobile_number
+                            }
+                          </td>
+
+                          <td>
+                            {searchPatient.blood_group ||
+                              "-"}
+                          </td>
+
+                          <td>
+                            <span
+                              className={`badge ${
+                                searchPatient.is_active
+                                  ? "bg-success"
+                                  : "bg-secondary"
+                              }`}
+                            >
+                              {searchPatient.is_active
+                                ? "Active"
+                                : "Inactive"}
+                            </span>
+                          </td>
+
                           <td>
                             <button
                               type="button"
-                              className="btn btn-sm text-white"
+                              className="btn btn-sm text-white text-nowrap"
                               style={{
-                                backgroundColor: "#1976A3",
+                                backgroundColor:
+                                  "#1976A3",
                               }}
-                              disabled={!searchPatient.is_active}
+                              disabled={
+                                !searchPatient.is_active
+                              }
                               onClick={() =>
-                                handleSelectPatient(searchPatient)
+                                handleSelectPatient(
+                                  searchPatient
+                                )
                               }
                             >
-                              Select Patient
+                              Select
+                              Patient
                             </button>
                           </td>
                         </tr>
@@ -1062,30 +1935,49 @@ function Appointments() {
           </div>
         )}
 
+        {/* SELECTED PATIENT */}
+
         {patient && (
           <>
             <div className="card mt-4">
               <div className="card-body">
-                <h5>Patient Details</h5>
+                <h5>
+                  Patient Details
+                </h5>
 
-                <p className="mb-1">
-                  <strong>
-                    Patient ID:
-                  </strong>{" "}
-                  {patient.patient_id}
-                </p>
+                <DetailRow
+                  label="Patient ID"
+                  value={
+                    patient.patient_id
+                  }
+                />
 
-                <p className="mb-1">
-                  <strong>Name:</strong>{" "}
-                  {patient.patient_name}
-                </p>
+                <DetailRow
+                  label="Name"
+                  value={
+                    patient.patient_name
+                  }
+                />
 
-                <p className="mb-1">
-                  <strong>Mobile:</strong>{" "}
-                  {patient.mobile_number}
-                </p>
+                <DetailRow
+                  label="Mobile"
+                  value={
+                    patient.mobile_number
+                  }
+                />
+
+                <DetailRow
+                  label="Status"
+                  value={
+                    patient.is_active
+                      ? "Active"
+                      : "Inactive"
+                  }
+                />
               </div>
             </div>
+
+            {/* BOOKING FORM */}
 
             <form
               className="card mt-4"
@@ -1099,7 +1991,9 @@ function Appointments() {
                 </h5>
 
                 <div className="row g-3">
-                  <div className="col-md-6">
+                  {/* DEPARTMENT */}
+
+                  <div className="col-12 col-md-6">
                     <label className="form-label">
                       Department
                     </label>
@@ -1115,11 +2009,14 @@ function Appointments() {
                       required
                     >
                       <option value="">
-                        Select Department
+                        Select
+                        Department
                       </option>
 
                       {departments.map(
-                        (department) => (
+                        (
+                          department
+                        ) => (
                           <option
                             key={
                               department.id
@@ -1128,21 +2025,27 @@ function Appointments() {
                               department.id
                             }
                           >
-                            {department.name}
+                            {
+                              department.name
+                            }
                           </option>
                         )
                       )}
                     </select>
                   </div>
 
-                  <div className="col-md-6">
+                  {/* DOCTOR */}
+
+                  <div className="col-12 col-md-6">
                     <label className="form-label">
                       Doctor
                     </label>
 
                     <select
                       className="form-select"
-                      value={selectedDoctor}
+                      value={
+                        selectedDoctor
+                      }
                       onChange={
                         handleDoctorChange
                       }
@@ -1158,8 +2061,12 @@ function Appointments() {
                       {doctors.map(
                         (doctor) => (
                           <option
-                            key={doctor.id}
-                            value={doctor.id}
+                            key={
+                              doctor.id
+                            }
+                            value={
+                              doctor.id
+                            }
                           >
                             {
                               doctor.doctor_name
@@ -1170,45 +2077,54 @@ function Appointments() {
                     </select>
                   </div>
 
+                  {/* FEES */}
+
                   {feePreview && (
                     <div className="col-12">
                       <div className="alert alert-secondary mb-0">
-                        <p className="mb-1">
-                          <strong>
-                            Registration Fee:
-                          </strong>{" "}
-                          ₹
-                          {
-                            feePreview.registration_fee
-                          }
-                        </p>
+                        <div className="row g-2">
+                          <div className="col-12 col-md-4">
+                            <strong>
+                              Registration
+                              Fee:
+                            </strong>{" "}
+                            ₹
+                            {
+                              feePreview.registration_fee
+                            }
+                          </div>
 
-                        <p className="mb-1">
-                          <strong>
-                            Consultation Fee:
-                          </strong>{" "}
-                          ₹
-                          {
-                            feePreview.consultation_fee
-                          }
-                        </p>
+                          <div className="col-12 col-md-4">
+                            <strong>
+                              Consultation
+                              Fee:
+                            </strong>{" "}
+                            ₹
+                            {
+                              feePreview.consultation_fee
+                            }
+                          </div>
 
-                        <p className="mb-0">
-                          <strong>
-                            Total Amount:
-                          </strong>{" "}
-                          ₹
-                          {
-                            feePreview.total_amount
-                          }
-                        </p>
+                          <div className="col-12 col-md-4">
+                            <strong>
+                              Total:
+                            </strong>{" "}
+                            ₹
+                            {
+                              feePreview.total_amount
+                            }
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  <div className="col-md-4">
+                  {/* TYPE */}
+
+                  <div className="col-12 col-md-4">
                     <label className="form-label">
-                      Appointment Type
+                      Appointment
+                      Type
                     </label>
 
                     <select
@@ -1230,11 +2146,14 @@ function Appointments() {
                     </select>
                   </div>
 
+                  {/* WALK-IN DATE */}
+
                   {appointmentType ===
                     "WALK_IN" && (
-                    <div className="col-md-4">
+                    <div className="col-12 col-md-4">
                       <label className="form-label">
-                        Appointment Date
+                        Appointment
+                        Date
                       </label>
 
                       <input
@@ -1247,17 +2166,21 @@ function Appointments() {
                       />
 
                       <small className="text-muted">
-                        Walk-in appointments
-                        are for today only.
+                        Walk-in
+                        appointments are
+                        for today only.
                       </small>
                     </div>
                   )}
 
+                  {/* PRIOR DATE */}
+
                   {appointmentType ===
                     "PRIOR_BOOKING" && (
-                    <div className="col-md-4">
+                    <div className="col-12 col-md-4">
                       <label className="form-label">
-                        Appointment Date
+                        Appointment
+                        Date
                       </label>
 
                       <select
@@ -1275,7 +2198,9 @@ function Appointments() {
                         </option>
 
                         <option
-                          value={getTomorrow()}
+                          value={
+                            getTomorrow()
+                          }
                         >
                           {getTomorrow()}
                         </option>
@@ -1292,62 +2217,144 @@ function Appointments() {
                       </select>
 
                       <small className="text-muted">
-                        Prior booking is
-                        available only for the
+                        Prior booking
+                        is available
+                        only for the
                         next 2 days.
                       </small>
                     </div>
                   )}
 
-                  <div className="col-md-4">
-                    <label className="form-label">
-                      Appointment Time
-                    </label>
+                  {/* WALK-IN TIME */}
 
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={
-                        loadingSlot
-                          ? "Checking..."
-                          : appointmentTime
-                      }
-                      placeholder={
-                        selectedDoctor
-                          ? "Next available slot"
-                          : "Select doctor first"
-                      }
-                      readOnly
-                    />
+                  {appointmentType ===
+                    "WALK_IN" && (
+                    <div className="col-12 col-md-4">
+                      <label className="form-label">
+                        Appointment
+                        Time
+                      </label>
 
-                    <small className="text-muted">
-                      Time is assigned
-                      automatically.
-                    </small>
-                  </div>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={
+                          loadingSlot
+                            ? "Checking..."
+                            : appointmentTime
+                        }
+                        placeholder={
+                          selectedDoctor
+                            ? "Next available slot"
+                            : "Select doctor first"
+                        }
+                        readOnly
+                      />
+
+                      <small className="text-muted">
+                        Next available
+                        time is assigned
+                        automatically.
+                      </small>
+                    </div>
+                  )}
+
+                  {/* PRIOR TIME */}
+
+                  {appointmentType ===
+                    "PRIOR_BOOKING" && (
+                    <div className="col-12 col-md-4">
+                      <label className="form-label">
+                        Appointment
+                        Time
+                      </label>
+
+                      <select
+                        className="form-select"
+                        value={
+                          appointmentTime
+                        }
+                        onChange={(e) =>
+                          setAppointmentTime(
+                            e.target.value
+                          )
+                        }
+                        disabled={
+                          loadingSlot ||
+                          !selectedDoctor ||
+                          !appointmentDate ||
+                          availableSlots.length ===
+                            0
+                        }
+                        required
+                      >
+                        <option value="">
+                          {loadingSlot
+                            ? "Checking..."
+                            : "Select Time"}
+                        </option>
+
+                        {availableSlots.map(
+                          (slot) => (
+                            <option
+                              key={
+                                slot
+                              }
+                              value={
+                                slot
+                              }
+                            >
+                              {formatTime(
+                                slot
+                              )}
+                            </option>
+                          )
+                        )}
+                      </select>
+
+                      <small className="text-muted">
+                        Select any
+                        available time
+                        slot.
+                      </small>
+                    </div>
+                  )}
+
+                  {/* SLOT MESSAGE */}
 
                   {slotMessage && (
                     <div className="col-12">
                       <div
-                        className={
+                        className={`alert ${
+                          appointmentType ===
+                            "WALK_IN" &&
                           appointmentTime
-                            ? "alert alert-success mb-0"
-                            : "alert alert-warning mb-0"
-                        }
+                            ? "alert-success"
+                            : availableSlots.length >
+                              0
+                            ? "alert-info"
+                            : "alert-warning"
+                        } mb-0`}
                       >
-                        {slotMessage}
+                        {
+                          slotMessage
+                        }
                       </div>
                     </div>
                   )}
 
-                  <div className="col-md-6">
+                  {/* PAYMENT */}
+
+                  <div className="col-12 col-md-6">
                     <label className="form-label">
                       Payment Status
                     </label>
 
                     <select
                       className="form-select"
-                      value={paymentStatus}
+                      value={
+                        paymentStatus
+                      }
                       onChange={(e) =>
                         setPaymentStatus(
                           e.target.value
@@ -1368,26 +2375,33 @@ function Appointments() {
                 {paymentStatus ===
                   "UNPAID" && (
                   <div className="alert alert-warning mt-3">
-                    Payment is not completed.
-                    Appointment, token and bill
-                    will not be generated.
+                    Payment is not
+                    completed.
+                    Appointment,
+                    token and bill
+                    will not be
+                    generated.
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  className="btn text-white mt-4"
-                  style={{
-                    backgroundColor:
-                      "#1976A3",
-                  }}
-                  disabled={
-                    loadingSlot ||
-                    !appointmentTime
-                  }
-                >
-                  Book Appointment
-                </button>
+                <div className="d-grid d-sm-flex mt-4">
+                  <button
+                    type="submit"
+                    className="btn text-white px-4"
+                    style={{
+                      backgroundColor:
+                        "#1976A3",
+                    }}
+                    disabled={
+                      loadingSlot ||
+                      (paymentStatus ===
+                        "PAID" &&
+                        !appointmentTime)
+                    }
+                  >
+                    Book Appointment
+                  </button>
+                </div>
               </div>
             </form>
           </>
@@ -1397,15 +2411,229 @@ function Appointments() {
   }
 
   // =====================================================
-  // VIEW AND EDIT APPOINTMENTS
+  // EDIT APPOINTMENT PAGE
   // =====================================================
 
-  if (selectedAction === "view") {
+  if (
+    selectedAction === "view" &&
+    editingAppointment
+  ) {
     return (
       <div>
-        <BackButton onClick={goBack} />
+        <BackButton
+          onClick={() => {
+            setEditingAppointment(
+              null
+            );
 
-        <h3>View and Edit Appointments</h3>
+            setMessage("");
+
+            refreshCurrentAppointmentList();
+          }}
+        />
+
+        <h3>
+          Edit Appointment
+        </h3>
+
+        <div
+          className="card mt-4 shadow-sm"
+          style={{
+            maxWidth: "800px",
+          }}
+        >
+          <div className="card-body">
+            <DetailRow
+              label="Appointment ID"
+              value={
+                editingAppointment.appointment_display_id ||
+                `APT${String(
+                  editingAppointment.id
+                ).padStart(
+                  4,
+                  "0"
+                )}`
+              }
+            />
+
+            <DetailRow
+              label="Patient ID"
+              value={
+                editingAppointment.patient_id
+              }
+            />
+
+            <DetailRow
+              label="Patient Name"
+              value={
+                editingAppointment.patient_name
+              }
+            />
+
+            <DetailRow
+              label="Doctor"
+              value={
+                editingAppointment.doctor_name
+              }
+            />
+
+            <DetailRow
+              label="Department"
+              value={
+                editingAppointment.department_name
+              }
+            />
+
+            <DetailRow
+              label="Type"
+              value={formatAppointmentType(
+                editingAppointment.appointment_type
+              )}
+            />
+
+            <DetailRow
+              label="Token"
+              value={
+                editingAppointment.token_number
+              }
+            />
+
+            <hr />
+
+            <form
+              onSubmit={
+                handleUpdateAppointment
+              }
+            >
+              <div className="row g-3">
+                <div className="col-12 col-md-6">
+                  <label className="form-label">
+                    Appointment Date
+                  </label>
+
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={
+                      editDate
+                    }
+                    min={
+                      getToday()
+                    }
+                    onChange={
+                      handleEditDateChange
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label">
+                    Appointment Time
+                  </label>
+
+                  <select
+                    className="form-select"
+                    value={
+                      editTime
+                    }
+                    onChange={(e) =>
+                      setEditTime(
+                        e.target.value
+                      )
+                    }
+                    disabled={
+                      loadingEditSlots ||
+                      !editDate
+                    }
+                    required
+                  >
+                    <option value="">
+                      {loadingEditSlots
+                        ? "Checking..."
+                        : "Select Available Time"}
+                    </option>
+
+                    {editAvailableSlots.map(
+                      (slot) => (
+                        <option
+                          key={
+                            slot
+                          }
+                          value={
+                            slot
+                          }
+                        >
+                          {formatTime(
+                            slot
+                          )}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {editSlotMessage && (
+                <div className="alert alert-warning mt-3">
+                  {
+                    editSlotMessage
+                  }
+                </div>
+              )}
+
+              {message && (
+                <div className="alert alert-info mt-3">
+                  {message}
+                </div>
+              )}
+
+              <div className="d-grid d-sm-flex mt-4">
+                <button
+                  type="submit"
+                  className="btn text-white px-4"
+                  style={{
+                    backgroundColor:
+                      "#1976A3",
+                  }}
+                  disabled={
+                    loadingEditSlots
+                  }
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =====================================================
+  // VIEW / LOG PAGE
+  // =====================================================
+
+  if (
+    selectedAction === "view" ||
+    selectedAction === "log"
+  ) {
+    const isLog =
+      selectedAction === "log";
+
+    return (
+      <div>
+        <BackButton
+          onClick={goBack}
+        />
+
+        <h3>
+          {isLog
+            ? "Appointment Log"
+            : "View and Edit Appointments"}
+        </h3>
+
+        {/* FILTER CARD */}
 
         <div className="card mt-4">
           <div className="card-body">
@@ -1414,7 +2642,7 @@ function Appointments() {
             </h5>
 
             <div className="row g-3 align-items-end">
-              <div className="col-md-5">
+              <div className="col-12 col-lg-5">
                 <label className="form-label">
                   Appointment Date
                 </label>
@@ -1422,87 +2650,110 @@ function Appointments() {
                 <input
                   type="date"
                   className="form-control"
-                  value={filterDate}
+                  value={
+                    filterDate
+                  }
                   onChange={(e) =>
-                    setFilterDate(e.target.value)
+                    setFilterDate(
+                      e.target.value
+                    )
                   }
                 />
               </div>
 
-              <div className="col-md-7">
-                <button
-                  type="button"
-                  className="btn text-white me-2"
-                  style={{
-                    backgroundColor: "#1976A3",
-                  }}
-                  onClick={handleDateFilter}
-                >
-                  Filter Date
-                </button>
+              <div className="col-12 col-lg-7">
+                <div className="d-grid d-sm-flex gap-2">
+                  <button
+                    type="button"
+                    className="btn text-white px-4"
+                    style={{
+                      backgroundColor:
+                        "#1976A3",
+                    }}
+                    onClick={
+                      handleDateFilter
+                    }
+                  >
+                    Filter Date
+                  </button>
 
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={clearFilter}
-                >
-                  Clear Date
-                </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary px-4"
+                    onClick={
+                      clearFilter
+                    }
+                  >
+                    Clear Date
+                  </button>
+                </div>
               </div>
             </div>
 
+            {/* TYPE FILTER */}
+
             <div className="mt-4">
-              <label className="form-label d-block">
+              <label className="form-label">
                 Appointment Type
               </label>
 
-              <div className="btn-group">
-                <button
-                  type="button"
-                  className={
-                    appointmentTypeFilter === "ALL"
-                      ? "btn btn-primary"
-                      : "btn btn-outline-primary"
-                  }
-                  onClick={() =>
-                    setAppointmentTypeFilter("ALL")
-                  }
-                >
-                  All
-                </button>
+              <div className="row g-2">
+                <div className="col-12 col-sm-auto">
+                  <button
+                    type="button"
+                    className={`btn w-100 px-4 ${
+                      appointmentTypeFilter ===
+                      "ALL"
+                        ? "btn-primary"
+                        : "btn-outline-primary"
+                    }`}
+                    onClick={() =>
+                      handleTypeFilterChange(
+                        "ALL"
+                      )
+                    }
+                  >
+                    All
+                  </button>
+                </div>
 
-                <button
-                  type="button"
-                  className={
-                    appointmentTypeFilter === "WALK_IN"
-                      ? "btn btn-primary"
-                      : "btn btn-outline-primary"
-                  }
-                  onClick={() =>
-                    setAppointmentTypeFilter(
+                <div className="col-12 col-sm-auto">
+                  <button
+                    type="button"
+                    className={`btn w-100 px-4 ${
+                      appointmentTypeFilter ===
                       "WALK_IN"
-                    )
-                  }
-                >
-                  Walk-in
-                </button>
+                        ? "btn-primary"
+                        : "btn-outline-primary"
+                    }`}
+                    onClick={() =>
+                      handleTypeFilterChange(
+                        "WALK_IN"
+                      )
+                    }
+                  >
+                    Walk-in
+                  </button>
+                </div>
 
-                <button
-                  type="button"
-                  className={
-                    appointmentTypeFilter ===
-                    "PRIOR_BOOKING"
-                      ? "btn btn-primary"
-                      : "btn btn-outline-primary"
-                  }
-                  onClick={() =>
-                    setAppointmentTypeFilter(
+                <div className="col-12 col-sm-auto">
+                  <button
+                    type="button"
+                    className={`btn w-100 px-4 ${
+                      appointmentTypeFilter ===
                       "PRIOR_BOOKING"
-                    )
-                  }
-                >
-                  Prior Booking
-                </button>
+                        ? "btn-primary"
+                        : "btn-outline-primary"
+                    }`}
+                    onClick={() =>
+                      handleTypeFilterChange(
+                        "PRIOR_BOOKING"
+                      )
+                    }
+                  >
+                    Prior Booking
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1515,8 +2766,22 @@ function Appointments() {
         )}
 
         <AppointmentTable
-          appointments={filteredAppointments}
-          onCancel={handleCancelAppointment}
+          appointments={
+            appointments
+          }
+          showActions={!isLog}
+          onCancel={
+            handleCancelAppointment
+          }
+          onEdit={
+            handleEditAppointment
+          }
+          formatAppointmentType={
+            formatAppointmentType
+          }
+          formatTime={
+            formatTime
+          }
         />
       </div>
     );
@@ -1525,120 +2790,249 @@ function Appointments() {
   return null;
 }
 
-
 // =========================================================
 // APPOINTMENT TABLE
 // =========================================================
 
 function AppointmentTable({
   appointments,
+  showActions,
   onCancel,
+  onEdit,
+  formatAppointmentType,
+  formatTime,
 }) {
   return (
-    <div className="table-responsive mt-4">
-      <table className="table table-bordered">
-        <thead>
-          <tr>
-            <th>Patient</th>
-            <th>Doctor</th>
-            <th>Type</th>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Token</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
+    <div className="card mt-4">
+      <div className="card-body p-0 p-sm-3">
+        <div className="table-responsive">
+          <table className="table table-bordered table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th className="text-nowrap">
+                  Appointment ID
+                </th>
 
-        <tbody>
-          {appointments.length > 0 ? (
-            appointments.map(
-              (appointment) => (
-                <tr key={appointment.id}>
-                  <td>
-                    {appointment.patient_name}
-                  </td>
+                <th className="text-nowrap">
+                  Patient ID
+                </th>
 
-                  <td>
-                    {appointment.doctor_name}
-                  </td>
+                <th>
+                  Patient
+                </th>
 
-                  <td>
-                    {
-                      appointment.appointment_type
-                    }
-                  </td>
+                <th>
+                  Doctor
+                </th>
 
-                  <td>
-                    {
-                      appointment.appointment_date
-                    }
-                  </td>
+                <th>
+                  Department
+                </th>
 
-                  <td>
-                    {
-                      appointment.appointment_time?.slice(
-                        0,
-                        5
-                      )
-                    }
-                  </td>
+                <th>
+                  Type
+                </th>
 
-                  <td>
-                    {
-                      appointment.token_number
-                    }
-                  </td>
+                <th>
+                  Date
+                </th>
 
-                  <td>
-                    {
-                      appointment.status
-                    }
-                  </td>
+                <th>
+                  Time
+                </th>
 
-                  <td>
-                    {appointment.status ===
-                    "SCHEDULED" ? (
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger"
-                        onClick={() =>
-                          onCancel?.(
+                <th>
+                  Token
+                </th>
+
+                <th>
+                  Status
+                </th>
+
+                {showActions && (
+                  <th className="text-center">
+                    Actions
+                  </th>
+                )}
+              </tr>
+            </thead>
+
+            <tbody>
+              {appointments.length >
+              0 ? (
+                appointments.map(
+                  (
+                    appointment
+                  ) => (
+                    <tr
+                      key={
+                        appointment.id
+                      }
+                    >
+                      <td className="text-nowrap">
+                        {appointment.appointment_display_id ||
+                          `APT${String(
                             appointment.id
-                          )
+                          ).padStart(
+                            4,
+                            "0"
+                          )}`}
+                      </td>
+
+                      <td className="text-nowrap">
+                        {appointment.patient_id ||
+                          "-"}
+                      </td>
+
+                      <td>
+                        {
+                          appointment.patient_name
                         }
-                      >
-                        Cancel
-                      </button>
-                    ) : (
-                      "-"
-                    )}
+                      </td>
+
+                      <td>
+                        {
+                          appointment.doctor_name
+                        }
+                      </td>
+
+                      <td>
+                        {appointment.department_name ||
+                          "-"}
+                      </td>
+
+                      <td className="text-nowrap">
+                        {formatAppointmentType(
+                          appointment.appointment_type
+                        )}
+                      </td>
+
+                      <td className="text-nowrap">
+                        {
+                          appointment.appointment_date
+                        }
+                      </td>
+
+                      <td className="text-nowrap">
+                        {formatTime(
+                          appointment.appointment_time
+                        )}
+                      </td>
+
+                      <td className="text-center">
+                        {
+                          appointment.token_number
+                        }
+                      </td>
+
+                      <td>
+                        <span
+                          className={`badge ${
+                            appointment.status ===
+                            "SCHEDULED"
+                              ? "bg-primary"
+                              : appointment.status ===
+                                "COMPLETED"
+                              ? "bg-success"
+                              : "bg-secondary"
+                          }`}
+                        >
+                          {
+                            appointment.status
+                          }
+                        </span>
+                      </td>
+
+                      {showActions && (
+                        <td>
+                          {appointment.status ===
+                          "SCHEDULED" ? (
+                            <div className="d-flex flex-column flex-xl-row gap-2 justify-content-center align-items-stretch">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-warning text-nowrap"
+                                onClick={() =>
+                                  onEdit(
+                                    appointment
+                                  )
+                                }
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger text-nowrap"
+                                onClick={() =>
+                                  onCancel(
+                                    appointment.id
+                                  )
+                                }
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              -
+                            </div>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  )
+                )
+              ) : (
+                <tr>
+                  <td
+                    colSpan={
+                      showActions
+                        ? 11
+                        : 10
+                    }
+                    className="text-center py-4"
+                  >
+                    No appointments
+                    found.
                   </td>
                 </tr>
-              )
-            )
-          ) : (
-            <tr>
-              <td
-                colSpan="8"
-                className="text-center"
-              >
-                No appointments found.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
 
+// =========================================================
+// DETAIL ROW
+// =========================================================
+
+function DetailRow({
+  label,
+  value,
+}) {
+  return (
+    <div className="row py-2 border-bottom">
+      <div className="col-12 col-sm-4 fw-bold mb-1 mb-sm-0">
+        {label}
+      </div>
+
+      <div className="col-12 col-sm-8">
+        {value ?? "-"}
+      </div>
+    </div>
+  );
+}
 
 // =========================================================
 // BACK BUTTON
 // =========================================================
 
-function BackButton({ onClick }) {
+function BackButton({
+  onClick,
+}) {
   return (
     <button
       type="button"
@@ -1651,5 +3045,4 @@ function BackButton({ onClick }) {
 }
 
 export default Appointments;
-
 
