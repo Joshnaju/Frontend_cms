@@ -20,21 +20,21 @@ function DoctorSidebar() {
       icon: "👥",
       label: "Patients",
     },
-    {
-      path: "/doctor/consultations",
-      icon: "🩺",
-      label: "Consultations",
-    },
-    {
-      path: "/doctor/prescriptions",
-      icon: "💊",
-      label: "Prescriptions",
-    },
-    {
-      path: "/doctor/lab-orders",
-      icon: "🧪",
-      label: "Lab Orders",
-    },
+    // {
+    //   path: "/doctor/consultations",
+    //   icon: "🩺",
+    //   label: "Consultations",
+    // },
+    // {
+    //   path: "/doctor/prescriptions",
+    //   icon: "💊",
+    //   label: "Prescriptions",
+    // },
+    // {
+    //   path: "/doctor/lab-orders",
+    //   icon: "🧪",
+    //   label: "Lab Orders",
+    // },
   ];
   return (
     <aside

@@ -7,6 +7,7 @@ function Login({ setUser }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
 
   const navigate = useNavigate();
 
@@ -14,7 +15,7 @@ function Login({ setUser }) {
     e.preventDefault();
 
     setError("");
-
+    setLoggingIn(true);
     try {
       const response = await login({
         username,
@@ -68,6 +69,8 @@ function Login({ setUser }) {
       console.log("LOGIN ERROR:", err);
 
       setError(err.response?.data?.message || "Invalid username or password");
+    } finally {
+      setLoggingIn(false);
     }
   };
 
@@ -139,8 +142,22 @@ function Login({ setUser }) {
               />
             </div>
 
-            <button type="submit" className="btn btn-primary w-100">
-              Login
+            <button
+              type="submit"
+              className="btn btn-dark text-white w-100"
+              disabled={loggingIn}
+            >
+              {loggingIn ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2"
+                    role="status"
+                  ></span>
+                  Logging in...
+                </>
+              ) : (
+                "Login"
+              )}
             </button>
           </form>
         </div>
