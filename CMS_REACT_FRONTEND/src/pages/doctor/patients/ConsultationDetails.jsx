@@ -1,6 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getPatientByAppointment } from "../../../services/doctorService";
+import { frequencyOptions } from "../../../constants/doctor/doctor";
 
 function ConsultationDetails() {
   const { patientId, appointmentId } = useParams();
@@ -176,7 +178,8 @@ function ConsultationDetails() {
                 <thead className="table-light">
                   <tr>
                     <th>Medicine</th>
-                    <th>Dosage</th>
+                    <th>Strength</th>
+                    <th>Dosage Form</th>
                     <th>Frequency</th>
                     <th>Duration</th>
                     <th>Instructions</th>
@@ -186,20 +189,76 @@ function ConsultationDetails() {
                 <tbody>
                   {consultation.medicine_prescriptions.map((medicine) => (
                     <tr key={medicine.id}>
+                      {/* Medicine */}
                       <td className="fw-semibold">
                         {medicine.medicine_name || "-"}
+                        {!medicine.medicine && (
+                          <div className="small text-warning-emphasis mt-1">
+                            <i className="bi bi-exclamation-circle me-1"></i>
+                            Not available in pharmacy
+                          </div>
+                        )}
                       </td>
 
-                      <td>{medicine.dosage || "-"}</td>
-
-                      <td>{medicine.frequency || "-"}</td>
-
+                      {/* Strength */}
                       <td>
-                        {medicine.duration
-                          ? `${medicine.duration} day(s)`
+                        {medicine.medicine_strength
+                          ? `${medicine.medicine_strength}${
+                              medicine.medicine_strength_unit
+                                ? ` ${medicine.medicine_strength_unit}`
+                                : ""
+                            }`
                           : "-"}
                       </td>
 
+                      {/* Dosage Form */}
+                      <td>{medicine.medicine_dosage_form || "-"}</td>
+
+                      {/* Frequency */}
+                      <td>
+                        {(() => {
+                          const frequency = frequencyOptions.find(
+                            (option) => option.value === medicine.frequency,
+                          );
+
+                          return frequency ? (
+                            <>
+                              <div className="fw-semibold">
+                                {frequency.label}
+                              </div>
+                              <div className="small text-muted">
+                                {frequency.timing}
+                              </div>
+                            </>
+                          ) : (
+                            medicine.frequency || "-"
+                          );
+                        })()}
+                      </td>
+
+                      {/* Duration */}
+                      <td>
+                        {medicine.duration ? (
+                          <>
+                            <span className="fw-semibold">
+                              {medicine.duration}
+                            </span>{" "}
+                            <span className="text-muted">
+                              {medicine.duration_unit === "DAYS"
+                                ? "Days"
+                                : medicine.duration_unit === "WEEKS"
+                                  ? "Weeks"
+                                  : medicine.duration_unit === "MONTHS"
+                                    ? "Months"
+                                    : medicine.duration_unit || ""}
+                            </span>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      {/* Instructions */}
                       <td>{medicine.instructions || "-"}</td>
                     </tr>
                   ))}
@@ -240,6 +299,12 @@ function ConsultationDetails() {
                     <tr key={lab.id}>
                       <td className="fw-semibold">
                         {lab.lab_test_name || "-"}
+                        {!lab.lab_test && (
+                          <div className="small text-warning-emphasis mt-1">
+                            <i className="bi bi-exclamation-circle me-1"></i>
+                            Not available in hospital lab
+                          </div>
+                        )}
                       </td>
 
                       <td>{lab.instructions || "-"}</td>
