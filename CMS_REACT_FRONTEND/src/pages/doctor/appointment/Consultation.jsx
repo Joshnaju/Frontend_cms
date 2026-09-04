@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+// @ts-nocheck
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -7,6 +9,7 @@ import {
 } from "../../../services/doctorService";
 import { getMedicines } from "../../../services/medicineService";
 import { getLabTests } from "../../../services/labTestService";
+import { frequencyOptions } from "../../../constants/doctor/doctor";
 
 function Consultation() {
   const { appointmentId } = useParams();
@@ -20,9 +23,9 @@ function Consultation() {
   const [showOtherMedicine, setShowOtherMedicine] = useState(false);
   const [otherMedicineForm, setOtherMedicineForm] = useState({
     medicine_name: "",
-    dosage: "",
     frequency: "",
     duration: "",
+    duration_unit: "",
     instructions: "",
   });
 
@@ -62,6 +65,7 @@ function Consultation() {
     dosage: "",
     frequency: "",
     duration: "",
+    duration_unit: "",
     instructions: "",
   });
 
@@ -141,29 +145,32 @@ function Consultation() {
       errors.medicine = "Medicine is required.";
     }
 
-    if (!medicineForm.dosage.trim()) {
-      errors.dosage = "Dosage is required.";
-    }
-
-    if (!medicineForm.frequency.trim()) {
+    if (!medicineForm.frequency) {
       errors.frequency = "Frequency is required.";
     }
 
-    if (!medicineForm.duration.trim()) {
+    if (!medicineForm.duration) {
       errors.duration = "Duration is required.";
+    } else if (Number(medicineForm.duration) < 1) {
+      errors.duration = "Duration must be at least 1.";
     }
 
+    if (!medicineForm.duration_unit) {
+      errors.duration_unit = "Duration unit is required.";
+    }
+
+    setMedicineErrors(errors);
+
     if (Object.keys(errors).length > 0) {
-      setMedicineErrors(errors);
       return;
     }
 
     const newMedicine = {
       medicine: Number(medicineForm.medicine),
-      dosage: medicineForm.dosage,
       frequency: medicineForm.frequency,
-      duration: medicineForm.duration,
-      instructions: medicineForm.instructions,
+      duration: Number(medicineForm.duration),
+      duration_unit: medicineForm.duration_unit,
+      instructions: medicineForm.instructions.trim(),
     };
 
     setFormData((prev) => ({
@@ -172,12 +179,11 @@ function Consultation() {
     }));
 
     // Reset form
-
     setMedicineForm({
       medicine: "",
-      dosage: "",
       frequency: "",
       duration: "",
+      duration_unit: "",
       instructions: "",
     });
 
@@ -188,21 +194,15 @@ function Consultation() {
   const handleMedicineChange = (e) => {
     const medicineId = e.target.value;
 
-    const selectedMedicine = medicines.find(
-      (medicine) => medicine.id === Number(medicineId),
-    );
-
     setMedicineForm((prev) => ({
       ...prev,
       medicine: medicineId,
-      dosage: selectedMedicine?.strength || "",
     }));
 
     if (medicineId) {
       setMedicineErrors((prev) => ({
         ...prev,
         medicine: "",
-        dosage: "",
       }));
     }
   };
@@ -229,46 +229,55 @@ function Consultation() {
       errors.medicine_name = "Medicine name is required.";
     }
 
-    if (!otherMedicineForm.dosage.trim()) {
-      errors.dosage = "Dosage is required.";
-    }
-
-    if (!otherMedicineForm.frequency.trim()) {
+    if (!otherMedicineForm.frequency) {
       errors.frequency = "Frequency is required.";
     }
 
-    if (!otherMedicineForm.duration.trim()) {
+    if (!otherMedicineForm.duration) {
       errors.duration = "Duration is required.";
+    } else if (Number(otherMedicineForm.duration) < 1) {
+      errors.duration = "Duration must be at least 1.";
     }
 
+    if (!otherMedicineForm.duration_unit) {
+      errors.duration_unit = "Duration unit is required.";
+    }
+
+    setOtherMedicineErrors(errors);
+
+    // Stop if validation fails
     if (Object.keys(errors).length > 0) {
-      setOtherMedicineErrors(errors);
       return;
     }
 
-    const newMedicine = {
-      medicine: null,
-      medicine_name: otherMedicineForm.medicine_name,
-      dosage: otherMedicineForm.dosage,
-      frequency: otherMedicineForm.frequency,
-      duration: otherMedicineForm.duration,
-      instructions: otherMedicineForm.instructions,
-    };
-
+    // Add unavailable medicine to the same array
     setFormData((prev) => ({
       ...prev,
-      medicine_prescriptions: [...prev.medicine_prescriptions, newMedicine],
+      medicine_prescriptions: [
+        ...prev.medicine_prescriptions,
+        {
+          medicine: null,
+          medicine_name: otherMedicineForm.medicine_name.trim(),
+          frequency: otherMedicineForm.frequency,
+          duration: Number(otherMedicineForm.duration),
+          duration_unit: otherMedicineForm.duration_unit,
+          instructions: otherMedicineForm.instructions.trim(),
+        },
+      ],
     }));
 
+    // Reset form
     setOtherMedicineForm({
       medicine_name: "",
-      dosage: "",
       frequency: "",
       duration: "",
+      duration_unit: "",
       instructions: "",
     });
 
     setOtherMedicineErrors({});
+
+    // Close form
     setShowOtherMedicine(false);
   };
 
@@ -532,14 +541,12 @@ function Consultation() {
         </div>
       </div>
 
-      {/* =================================================
-    MEDICAL HISTORY
-================================================= */}
+      {/* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */}
       {/* ==================== MEDICAL HISTORY ==================== */}
 
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-header bg-white">
-          <h5 className="mb-0 fw-semibold ">
+          <h5 className="mb-0 fw-semibold">
             <i className="bi bi-clock-history me-2 fs-4 text-info"></i>
             <span className="text-primary-emphasis">Medical History</span>
           </h5>
@@ -578,7 +585,7 @@ function Consultation() {
                     >
                       <div className="w-100">
                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                          {/* LEFT SIDE - DATE */}
+                          {/* LEFT SIDE */}
 
                           <div className="d-flex align-items-center">
                             <div className="me-3">
@@ -600,20 +607,19 @@ function Consultation() {
                             </div>
                           </div>
 
-                          {/* RIGHT SIDE - DOCTOR & DEPARTMENT */}
+                          {/* RIGHT SIDE */}
 
                           <div className="d-flex align-items-center gap-2 me-3 flex-wrap">
                             {history.doctor_name && (
                               <span className="badge bg-primary-subtle text-primary-emphasis px-3 py-2">
                                 <i className="bi bi-person-badge me-1"></i>
-                                Dr.{history.doctor_name}
+                                Dr. {history.doctor_name}
                               </span>
                             )}
 
                             {history.department_name && (
                               <span className="badge bg-secondary-subtle text-secondary px-3 py-2">
                                 <i className="bi bi-hospital me-1"></i>
-
                                 {history.department_name}
                               </span>
                             )}
@@ -735,7 +741,9 @@ function Consultation() {
                         <div className="mt-1">{history.notes || "-"}</div>
                       </div>
 
-                      {/* ==================== MEDICINES ==================== */}
+                      {/* =====================================================
+                    MEDICINES
+                ====================================================== */}
 
                       <div className="mt-4">
                         <h6 className="fw-semibold mb-3">
@@ -754,13 +762,11 @@ function Consultation() {
                               <thead className="table-light">
                                 <tr>
                                   <th>Medicine</th>
-
-                                  <th>Dosage</th>
-
+                                  <th>Strength</th>
+                                  {/* <th>Dosage Form</th> */}
                                   <th>Frequency</th>
-
                                   <th>Duration</th>
-
+                                  {/* <th>Quantity</th> */}
                                   <th>Instructions</th>
                                 </tr>
                               </thead>
@@ -769,15 +775,50 @@ function Consultation() {
                                 {history.medicine_prescriptions.map(
                                   (medicine) => (
                                     <tr key={medicine.id}>
+                                      {/* MEDICINE */}
+
                                       <td className="fw-semibold">
                                         {medicine.medicine_name || "-"}
                                       </td>
 
-                                      <td>{medicine.dosage || "-"}</td>
+                                      {/* STRENGTH */}
+
+                                      <td>
+                                        {medicine.medicine_strength
+                                          ? `${medicine.medicine_strength} ${
+                                              medicine.medicine_strength_unit ||
+                                              ""
+                                            }`
+                                          : "-"}
+                                      </td>
+
+                                      {/* DOSAGE FORM */}
+
+                                      {/* <td>
+                                        {medicine.medicine_dosage_form || "-"}
+                                      </td> */}
+
+                                      {/* FREQUENCY */}
 
                                       <td>{medicine.frequency || "-"}</td>
 
-                                      <td>{medicine.duration || "-"}</td>
+                                      {/* DURATION */}
+
+                                      <td>
+                                        {medicine.duration
+                                          ? `${medicine.duration} ${
+                                              medicine.duration_unit || ""
+                                            }`
+                                          : "-"}
+                                      </td>
+
+                                      {/* QUANTITY */}
+
+                                      {/* <td className="fw-semibold">
+                                        {medicine.quantity ?? "-"}
+                                      </td> */}
+
+                                      {/* INSTRUCTIONS */}
 
                                       <td>{medicine.instructions || "-"}</td>
                                     </tr>
@@ -789,7 +830,9 @@ function Consultation() {
                         )}
                       </div>
 
-                      {/* ==================== LAB ORDERS ==================== */}
+                      {/* =====================================================
+                    LAB ORDERS
+                ====================================================== */}
 
                       <div className="mt-4">
                         <h6 className="fw-semibold mb-3">
@@ -808,7 +851,6 @@ function Consultation() {
                               <thead className="table-light">
                                 <tr>
                                   <th>Lab Test</th>
-
                                   <th>Instructions</th>
                                 </tr>
                               </thead>
@@ -934,23 +976,24 @@ function Consultation() {
             {/* =================================================
         MEDICINE
     ================================================= */}
-
-            <div className="card mb-4">
-              {/* Medicine Header */}
-              <div className="card-header">
+            {/* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */}
+            <div className="card mb-4 border-0 shadow-sm">
+              {/*MEDICINE HEADER*/}
+              <div className="card-header bg-white">
                 <h5 className="mb-0">
                   <i className="fs-4 bi bi-prescription2 me-2 text-success-emphasis"></i>
+
                   <span className="text-primary-emphasis">Medicine</span>
                 </h5>
               </div>
 
               <div className="card-body">
-                {/* =================================================
-            INITIAL MEDICINE BUTTONS
-        ================================================= */}
+                {/* =====================================================
+        INITIAL BUTTONS
+    ====================================================== */}
 
                 {!showPrescription && !showOtherMedicine && (
-                  <>
+                  <div>
                     <button
                       type="button"
                       className="btn btn-primary"
@@ -970,23 +1013,26 @@ function Consultation() {
                         Add medicine not available in pharmacy
                       </button>
                     </div>
-                  </>
+                  </div>
                 )}
 
-                {/* =================================================
-            MEDICINE NOT AVAILABLE IN PHARMACY
-        ================================================= */}
+                {/* =====================================================
+        MEDICINE NOT AVAILABLE IN PHARMACY
+    ====================================================== */}
 
                 {showOtherMedicine && (
-                  <div className="border rounded p-3 mt-3">
-                    <h6 className="mb-3">
+                  <div className="border rounded p-3 mt-3 bg-light">
+                    <h6 className="fw-semibold mb-3">
+                      <i className="bi bi-capsule me-2 text-primary"></i>
                       Add Medicine Not Available in Pharmacy
                     </h6>
 
                     {/* Medicine Name */}
+
                     <div className="mb-3">
-                      <label className="form-label">
-                        Medicine Name <span className="text-danger">*</span>
+                      <label className="form-label fw-semibold">
+                        Medicine Name
+                        <span className="text-danger ms-1">*</span>
                       </label>
 
                       <input
@@ -1007,48 +1053,35 @@ function Consultation() {
                       )}
                     </div>
 
-                    {/* Dosage / Frequency / Duration */}
+                    {/* =================================================
+            FREQUENCY / DURATION / UNIT
+        ================================================== */}
+
                     <div className="row">
-                      {/* Dosage */}
-                      <div className="col-md-4 mb-3">
-                        <label className="form-label">
-                          Dosage <span className="text-danger">*</span>
-                        </label>
-
-                        <input
-                          type="text"
-                          name="dosage"
-                          className={`form-control ${
-                            otherMedicineErrors.dosage ? "is-invalid" : ""
-                          }`}
-                          value={otherMedicineForm.dosage}
-                          onChange={handleOtherMedicineChange}
-                          placeholder="e.g. 500 mg"
-                        />
-
-                        {otherMedicineErrors.dosage && (
-                          <div className="invalid-feedback">
-                            {otherMedicineErrors.dosage}
-                          </div>
-                        )}
-                      </div>
-
                       {/* Frequency */}
+
                       <div className="col-md-4 mb-3">
-                        <label className="form-label">
-                          Frequency <span className="text-danger">*</span>
+                        <label className="form-label fw-semibold">
+                          Frequency
+                          <span className="text-danger ms-1">*</span>
                         </label>
 
-                        <input
-                          type="text"
+                        <select
                           name="frequency"
-                          className={`form-control ${
+                          className={`form-select ${
                             otherMedicineErrors.frequency ? "is-invalid" : ""
                           }`}
                           value={otherMedicineForm.frequency}
                           onChange={handleOtherMedicineChange}
-                          placeholder="e.g. 1-0-1"
-                        />
+                        >
+                          <option value="">Select Frequency</option>
+
+                          {frequencyOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label} — {option.timing}
+                            </option>
+                          ))}
+                        </select>
 
                         {otherMedicineErrors.frequency && (
                           <div className="invalid-feedback">
@@ -1058,20 +1091,23 @@ function Consultation() {
                       </div>
 
                       {/* Duration */}
+
                       <div className="col-md-4 mb-3">
-                        <label className="form-label">
-                          Duration <span className="text-danger">*</span>
+                        <label className="form-label fw-semibold">
+                          Duration
+                          <span className="text-danger ms-1">*</span>
                         </label>
 
                         <input
-                          type="text"
+                          type="number"
+                          min="1"
                           name="duration"
                           className={`form-control ${
                             otherMedicineErrors.duration ? "is-invalid" : ""
                           }`}
                           value={otherMedicineForm.duration}
                           onChange={handleOtherMedicineChange}
-                          placeholder="e.g. 5 days"
+                          placeholder="e.g. 5"
                         />
 
                         {otherMedicineErrors.duration && (
@@ -1080,11 +1116,50 @@ function Consultation() {
                           </div>
                         )}
                       </div>
+
+                      {/* Duration Unit */}
+
+                      <div className="col-md-4 mb-3">
+                        <label className="form-label fw-semibold">
+                          Duration Unit
+                          <span className="text-danger ms-1">*</span>
+                        </label>
+
+                        <select
+                          name="duration_unit"
+                          className={`form-select ${
+                            otherMedicineErrors.duration_unit
+                              ? "is-invalid"
+                              : ""
+                          }`}
+                          value={otherMedicineForm.duration_unit}
+                          onChange={handleOtherMedicineChange}
+                        >
+                          <option value="">Select Unit</option>
+
+                          <option value="DAYS">Days</option>
+
+                          <option value="WEEKS">Weeks</option>
+
+                          <option value="MONTHS">Months</option>
+                        </select>
+
+                        {otherMedicineErrors.duration_unit && (
+                          <div className="invalid-feedback">
+                            {otherMedicineErrors.duration_unit}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Instructions */}
+                    {/* =================================================
+            INSTRUCTIONS
+        ================================================== */}
+
                     <div className="mb-3">
-                      <label className="form-label">Instructions</label>
+                      <label className="form-label fw-semibold">
+                        Instructions
+                      </label>
 
                       <textarea
                         name="instructions"
@@ -1096,7 +1171,10 @@ function Consultation() {
                       />
                     </div>
 
-                    {/* Buttons */}
+                    {/* =================================================
+            BUTTONS
+        ================================================== */}
+
                     <button
                       type="button"
                       className="btn btn-primary me-2"
@@ -1111,6 +1189,7 @@ function Consultation() {
                       className="btn btn-secondary"
                       onClick={() => {
                         setShowOtherMedicine(false);
+
                         setOtherMedicineErrors({});
                       }}
                     >
@@ -1119,18 +1198,25 @@ function Consultation() {
                   </div>
                 )}
 
-                {/* =================================================
-            AVAILABLE MEDICINE FORM
-        ================================================= */}
+                {/* =====================================================
+        PHARMACY AVAILABLE MEDICINE
+    ====================================================== */}
 
                 {showPrescription && (
-                  <div className="border rounded p-3 mt-3">
-                    <h6 className="mb-3">Add Medicine</h6>
+                  <div className="border rounded p-3 mt-3 bg-light">
+                    <h6 className="fw-semibold mb-3">
+                      <i className="bi bi-capsule me-2 text-primary"></i>
+                      Add Medicine
+                    </h6>
 
-                    {/* Medicine */}
+                    {/* =================================================
+            MEDICINE SELECT
+        ================================================== */}
+
                     <div className="mb-3">
-                      <label className="form-label">
-                        Medicine <span className="text-danger">*</span>
+                      <label className="form-label fw-semibold">
+                        Medicine
+                        <span className="text-danger ms-1">*</span>
                       </label>
 
                       <select
@@ -1147,9 +1233,17 @@ function Consultation() {
                           .map((medicine) => (
                             <option key={medicine.id} value={medicine.id}>
                               {medicine.name}
-                              {medicine.strength
-                                ? ` - ${medicine.strength}`
-                                : ""}
+
+                              {medicine.strength && (
+                                <>
+                                  {" - "}
+                                  {medicine.strength}
+
+                                  {medicine.strength_unit
+                                    ? ` ${medicine.strength_unit}`
+                                    : ""}
+                                </>
+                              )}
                             </option>
                           ))}
                       </select>
@@ -1161,104 +1255,215 @@ function Consultation() {
                       )}
                     </div>
 
-                    {/* Dosage */}
-                    <div className="mb-3">
-                      <label className="form-label">Dosage</label>
+                    {/* =================================================
+            MEDICINE MASTER INFORMATION
+        ================================================== */}
 
-                      <input
-                        type="text"
-                        className={`form-control ${
-                          medicineErrors.dosage ? "is-invalid" : ""
-                        }`}
-                        value={medicineForm.dosage}
-                        readOnly
-                        placeholder="Dosage"
-                      />
+                    {medicineForm.medicine &&
+                      (() => {
+                        const selectedMedicine = medicines.find(
+                          (medicine) =>
+                            medicine.id === Number(medicineForm.medicine),
+                        );
 
-                      {medicineErrors.dosage && (
-                        <div className="invalid-feedback">
-                          {medicineErrors.dosage}
-                        </div>
-                      )}
-                    </div>
+                        if (!selectedMedicine) {
+                          return null;
+                        }
 
-                    {/* Frequency */}
-                    <div className="mb-3">
-                      <label className="form-label">
-                        Frequency <span className="text-danger">*</span>
-                      </label>
+                        return (
+                          <div className="row g-3 mb-4">
+                            {/* Strength */}
 
-                      <input
-                        type="text"
-                        className={`form-control ${
-                          medicineErrors.frequency ? "is-invalid" : ""
-                        }`}
-                        placeholder="e.g. 1-1-1"
-                        value={medicineForm.frequency}
-                        onChange={(e) => {
-                          const value = e.target.value;
+                            <div className="col-md-4">
+                              <label className="form-label fw-semibold">
+                                Strength
+                              </label>
 
-                          setMedicineForm((prev) => ({
-                            ...prev,
-                            frequency: value,
-                          }));
+                              <input
+                                type="text"
+                                className="form-control bg-white"
+                                value={selectedMedicine.strength || "-"}
+                                readOnly
+                              />
+                            </div>
 
-                          if (value.trim()) {
-                            setMedicineErrors((prev) => ({
+                            {/* Strength Unit */}
+
+                            <div className="col-md-4">
+                              <label className="form-label fw-semibold">
+                                Strength Unit
+                              </label>
+
+                              <input
+                                type="text"
+                                className="form-control bg-white"
+                                value={selectedMedicine.strength_unit || "-"}
+                                readOnly
+                              />
+                            </div>
+
+                            {/* Dosage Form */}
+
+                            <div className="col-md-4">
+                              <label className="form-label fw-semibold">
+                                Dosage Form
+                              </label>
+
+                              <input
+                                type="text"
+                                className="form-control bg-white"
+                                value={selectedMedicine.dosage_form || "-"}
+                                readOnly
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                    {/* =================================================
+            FREQUENCY / DURATION / UNIT
+        ================================================== */}
+
+                    <div className="row">
+                      {/* Frequency */}
+
+                      <div className="col-md-4 mb-3">
+                        <label className="form-label fw-semibold">
+                          Frequency
+                          <span className="text-danger ms-1">*</span>
+                        </label>
+
+                        <select
+                          className={`form-select ${
+                            medicineErrors.frequency ? "is-invalid" : ""
+                          }`}
+                          value={medicineForm.frequency}
+                          onChange={(e) => {
+                            const value = e.target.value;
+
+                            setMedicineForm((prev) => ({
                               ...prev,
-                              frequency: "",
+                              frequency: value,
                             }));
-                          }
-                        }}
-                      />
 
-                      {medicineErrors.frequency && (
-                        <div className="invalid-feedback">
-                          {medicineErrors.frequency}
-                        </div>
-                      )}
-                    </div>
+                            if (value) {
+                              setMedicineErrors((prev) => ({
+                                ...prev,
+                                frequency: "",
+                              }));
+                            }
+                          }}
+                        >
+                          <option value="">Select Frequency</option>
 
-                    {/* Duration */}
-                    <div className="mb-3">
-                      <label className="form-label">
-                        Duration <span className="text-danger">*</span>
-                      </label>
+                          {frequencyOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label} — {option.timing}
+                            </option>
+                          ))}
+                        </select>
 
-                      <input
-                        type="text"
-                        className={`form-control ${
-                          medicineErrors.duration ? "is-invalid" : ""
-                        }`}
-                        placeholder="e.g. 3 days"
-                        value={medicineForm.duration}
-                        onChange={(e) => {
-                          const value = e.target.value;
+                        {medicineErrors.frequency && (
+                          <div className="invalid-feedback">
+                            {medicineErrors.frequency}
+                          </div>
+                        )}
+                      </div>
 
-                          setMedicineForm((prev) => ({
-                            ...prev,
-                            duration: value,
-                          }));
+                      {/* Duration */}
 
-                          if (value.trim()) {
-                            setMedicineErrors((prev) => ({
+                      <div className="col-md-4 mb-3">
+                        <label className="form-label fw-semibold">
+                          Duration
+                          <span className="text-danger ms-1">*</span>
+                        </label>
+
+                        <input
+                          type="number"
+                          min="1"
+                          className={`form-control ${
+                            medicineErrors.duration ? "is-invalid" : ""
+                          }`}
+                          placeholder="e.g. 5"
+                          value={medicineForm.duration}
+                          onChange={(e) => {
+                            const value = e.target.value;
+
+                            setMedicineForm((prev) => ({
                               ...prev,
-                              duration: "",
+                              duration: value,
                             }));
-                          }
-                        }}
-                      />
 
-                      {medicineErrors.duration && (
-                        <div className="invalid-feedback">
-                          {medicineErrors.duration}
-                        </div>
-                      )}
+                            if (value) {
+                              setMedicineErrors((prev) => ({
+                                ...prev,
+                                duration: "",
+                              }));
+                            }
+                          }}
+                        />
+
+                        {medicineErrors.duration && (
+                          <div className="invalid-feedback">
+                            {medicineErrors.duration}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Duration Unit */}
+
+                      <div className="col-md-4 mb-3">
+                        <label className="form-label fw-semibold">
+                          Duration Unit
+                          <span className="text-danger ms-1">*</span>
+                        </label>
+
+                        <select
+                          className={`form-select ${
+                            medicineErrors.duration_unit ? "is-invalid" : ""
+                          }`}
+                          value={medicineForm.duration_unit}
+                          onChange={(e) => {
+                            const value = e.target.value;
+
+                            setMedicineForm((prev) => ({
+                              ...prev,
+                              duration_unit: value,
+                            }));
+
+                            if (value) {
+                              setMedicineErrors((prev) => ({
+                                ...prev,
+                                duration_unit: "",
+                              }));
+                            }
+                          }}
+                        >
+                          <option value="">Select Unit</option>
+
+                          <option value="DAYS">Days</option>
+
+                          <option value="WEEKS">Weeks</option>
+
+                          <option value="MONTHS">Months</option>
+                        </select>
+
+                        {medicineErrors.duration_unit && (
+                          <div className="invalid-feedback">
+                            {medicineErrors.duration_unit}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Instructions */}
+                    {/* =================================================
+            INSTRUCTIONS
+        ================================================== */}
+
                     <div className="mb-3">
-                      <label className="form-label">Instructions</label>
+                      <label className="form-label fw-semibold">
+                        Instructions
+                      </label>
 
                       <textarea
                         className="form-control"
@@ -1274,7 +1479,10 @@ function Consultation() {
                       ></textarea>
                     </div>
 
-                    {/* Buttons */}
+                    {/* =================================================
+            BUTTONS
+        ================================================== */}
+
                     <button
                       type="button"
                       className="btn btn-primary me-2"
@@ -1289,6 +1497,7 @@ function Consultation() {
                       className="btn btn-secondary"
                       onClick={() => {
                         setShowPrescription(false);
+
                         setMedicineErrors({});
                       }}
                     >
@@ -1297,62 +1506,140 @@ function Consultation() {
                   </div>
                 )}
 
-                {/* =================================================
-            ADDED MEDICINES
-        ================================================= */}
+                {/* =====================================================
+        ADDED MEDICINES
+    ====================================================== */}
 
                 {formData.medicine_prescriptions.length > 0 && (
                   <div className="table-responsive mt-4">
-                    <h6 className="fw-semibold mb-3">Added Medicines</h6>
+                    <h6 className="fw-semibold mb-3">
+                      <i className="bi bi-list-check me-2 text-success"></i>
+                      Added Medicines
+                    </h6>
 
                     <table className="table table-bordered align-middle mb-0">
                       <thead className="table-light">
                         <tr>
                           <th>Medicine</th>
-                          <th>Dosage</th>
+
+                          <th>Strength</th>
+
+                          <th>Dosage Form</th>
+
                           <th>Frequency</th>
+
                           <th>Duration</th>
-                          <th>Action</th>
+
+                          {/* <th>Quantity</th> */}
+
+                          <th className="text-center">Action</th>
                         </tr>
                       </thead>
 
                       <tbody>
                         {formData.medicine_prescriptions.map(
-                          (medicine, index) => (
-                            <tr key={index}>
-                              <td>
-                                {medicine.medicine
-                                  ? medicines.find(
-                                      (item) => item.id === medicine.medicine,
-                                    )?.name || "Unknown Medicine"
-                                  : medicine.medicine_name}
-                              </td>
+                          (medicine, index) => {
+                            const selectedMedicine = medicine.medicine
+                              ? medicines.find(
+                                  (item) =>
+                                    item.id === Number(medicine.medicine),
+                                )
+                              : null;
 
-                              <td>{medicine.dosage}</td>
+                            const frequency = frequencyOptions.find(
+                              (option) => option.value === medicine.frequency,
+                            );
 
-                              <td>{medicine.frequency}</td>
+                            return (
+                              <tr key={index}>
+                                {/* Medicine */}
 
-                              <td>{medicine.duration}</td>
+                                <td className="fw-semibold">
+                                  {medicine.medicine
+                                    ? selectedMedicine?.name ||
+                                      "Unknown Medicine"
+                                    : medicine.medicine_name || "-"}
+                                </td>
 
-                              <td className="text-center">
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => {
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      medicine_prescriptions:
-                                        prev.medicine_prescriptions.filter(
-                                          (_, i) => i !== index,
-                                        ),
-                                    }));
-                                  }}
-                                >
-                                  <i className="bi bi-trash"></i>
-                                </button>
-                              </td>
-                            </tr>
-                          ),
+                                {/* Strength */}
+
+                                <td>
+                                  {medicine.medicine &&
+                                  selectedMedicine?.strength
+                                    ? `${selectedMedicine.strength}${
+                                        selectedMedicine.strength_unit
+                                          ? ` ${selectedMedicine.strength_unit}`
+                                          : ""
+                                      }`
+                                    : "-"}
+                                </td>
+
+                                {/* Dosage Form */}
+
+                                <td>
+                                  {medicine.medicine
+                                    ? selectedMedicine?.dosage_form || "-"
+                                    : "-"}
+                                </td>
+
+                                {/* Frequency */}
+
+                                <td>
+                                  {frequency ? (
+                                    <>
+                                      <div className="fw-semibold">
+                                        {frequency.label}
+                                      </div>
+
+                                      <div className="small text-muted">
+                                        {frequency.timing}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    "-"
+                                  )}
+                                </td>
+
+                                {/* Duration */}
+
+                                <td>
+                                  {medicine.duration
+                                    ? `${medicine.duration} ${
+                                        medicine.duration_unit || ""
+                                      }`
+                                    : "-"}
+                                </td>
+
+                                {/* Quantity */}
+
+                                {/* <td className="fw-semibold">
+                                  {medicine.quantity ?? "-"}
+                                </td> */}
+
+                                {/* Delete */}
+
+                                <td className="text-center">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => {
+                                      setFormData((prev) => ({
+                                        ...prev,
+
+                                        medicine_prescriptions:
+                                          prev.medicine_prescriptions.filter(
+                                            (_, i) => i !== index,
+                                          ),
+                                      }));
+                                    }}
+                                    title="Remove medicine"
+                                  >
+                                    <i className="bi bi-trash"></i>
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          },
                         )}
                       </tbody>
                     </table>
@@ -1361,10 +1648,7 @@ function Consultation() {
               </div>
             </div>
 
-            {/* =================================================
-        LAB ORDERS
-    ================================================= */}
-
+            {/* LAB ORDERS */}
             <div className="card mb-4">
               {/* Lab Header */}
               <div className="card-header">
