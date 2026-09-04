@@ -5,17 +5,9 @@ function MedicineList() {
 
   const [medicines, setMedicines] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
-
-  const [selectedMedicine, setSelectedMedicine] =
-    useState(null);
-
-  const [inventoryLoading, setInventoryLoading] =
-    useState(false);
+  const [error, setError] = useState("");
 
 
   // =================================
@@ -24,29 +16,35 @@ function MedicineList() {
 
   useEffect(() => {
 
-    getMedicines();
+    loadMedicines();
 
   }, []);
 
 
-  async function getMedicines() {
+  async function loadMedicines() {
 
     try {
+
+      setLoading(true);
+
+      setError("");
 
       const response = await api.get(
         "medicine-master/medicines/"
       );
 
-      setMedicines(
-        response.data
-      );
+      setMedicines(response.data);
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        "Error loading medicines:",
+        error
+      );
 
       setError(
-        "Failed to load medicines"
+        error.response?.data?.detail ||
+        "Failed to load medicines."
       );
 
     } finally {
@@ -59,61 +57,22 @@ function MedicineList() {
 
 
   // =================================
-  // VIEW INVENTORY
-  // =================================
-
-  async function handleViewInventory(
-    medicineId
-  ) {
-
-    try {
-
-      setInventoryLoading(true);
-
-      setError("");
-
-      const response = await api.get(
-        `pharmacy/medicine/${medicineId}/`
-      );
-
-      setSelectedMedicine(
-        response.data
-      );
-
-    } catch (error) {
-
-      console.error(
-        "Inventory Error:",
-        error
-      );
-
-      setError(
-        error.response?.data?.detail ||
-        "Failed to load inventory details"
-      );
-
-    } finally {
-
-      setInventoryLoading(false);
-
-    }
-
-  }
-
-
-  // =================================
-  // MAIN MEDICINE LOADING
+  // LOADING
   // =================================
 
   if (loading) {
 
     return (
 
-      <h3 className="text-center mt-5">
+      <div className="container mt-4">
 
-        Loading medicines...
+        <h3 className="text-center mt-5">
 
-      </h3>
+          Loading medicines...
+
+        </h3>
+
+      </div>
 
     );
 
@@ -156,417 +115,166 @@ function MedicineList() {
 
 
       {/* =================================
-          INVENTORY LOADING
+          MEDICINE LIST
       ================================= */}
 
-      {inventoryLoading && (
+      <div className="card shadow-sm">
 
-        <div className="text-center mb-3">
+        <div className="card-header">
 
-          <div
-            className="spinner-border"
-            role="status"
-          />
+          <strong>
+
+            Available Medicines
+
+          </strong>
 
         </div>
 
-      )}
 
+        <div className="card-body p-0">
 
-      {/* =================================
-          INVENTORY DETAILS
-      ================================= */}
+          <div className="table-responsive">
 
-      {selectedMedicine && (
+            <table className="table table-bordered table-hover mb-0">
 
-        <div className="card shadow-sm mb-4">
+              <thead className="table-light">
 
+                <tr>
 
-          <div className="card-header">
+                  <th>
+                    ID
+                  </th>
 
-            <strong>
+                  <th>
+                    Medicine Name
+                  </th>
 
-              Inventory Details
+                  <th>
+                    Generic Name
+                  </th>
 
-            </strong>
+                  <th>
+                    Dosage Form
+                  </th>
 
-          </div>
+                  <th>
+                    Strength
+                  </th>
 
+                  <th>
+                    Manufacturer
+                  </th>
 
-          <div className="card-body">
+                  <th>
+                    Price
+                  </th>
 
-
-            {/* =========================
-                MEDICINE DETAILS
-            ========================= */}
-
-            <div className="row">
-
-
-              <div className="col-md-4 mb-3">
-
-                <strong>
-
-                  Medicine:
-
-                </strong>
-
-                <p>
-
-                  {selectedMedicine.name}
-
-                </p>
-
-              </div>
-
-
-              <div className="col-md-4 mb-3">
-
-                <strong>
-
-                  Medicine ID:
-
-                </strong>
-
-                <p>
-
-                  {selectedMedicine.medicine_id}
-
-                </p>
-
-              </div>
-
-
-              <div className="col-md-4 mb-3">
-
-                <strong>
-
-                  Price:
-
-                </strong>
-
-                <p>
-
-                  ₹ {selectedMedicine.price}
-
-                </p>
-
-              </div>
-
-
-            </div>
-
-
-            {/* =========================
-                INVENTORY DATA
-            ========================= */}
-
-            {selectedMedicine.inventory ? (
-
-              <div className="row">
-
-
-                <div className="col-md-4 mb-3">
-
-                  <strong>
-
-                    Current Stock:
-
-                  </strong>
-
-                  <p>
-
-                    {
-                      selectedMedicine.inventory.stock
-                    }
-
-                  </p>
-
-                </div>
-
-
-                <div className="col-md-4 mb-3">
-
-                  <strong>
-
-                    Minimum Stock:
-
-                  </strong>
-
-                  <p>
-
-                    {
-                      selectedMedicine.inventory.min_stock
-                    }
-
-                  </p>
-
-                </div>
-
-
-                <div className="col-md-4 mb-3">
-
-                  <strong>
-
-                    Maximum Stock:
-
-                  </strong>
-
-                  <p>
-
-                    {
-                      selectedMedicine.inventory.max_stock
-                    }
-
-                  </p>
-
-                </div>
-
-
-                <div className="col-md-4 mb-3">
-
-                  <strong>
-
-                    Batch Number:
-
-                  </strong>
-
-                  <p>
-
-                    {
-                      selectedMedicine.inventory.batch_number
-                    }
-
-                  </p>
-
-                </div>
-
-
-                <div className="col-md-4 mb-3">
-
-                  <strong>
-
-                    Manufacturing Date:
-
-                  </strong>
-
-                  <p>
-
-                    {
-                      selectedMedicine.inventory.manufacturing_date
-                    }
-
-                  </p>
-
-                </div>
-
-
-                <div className="col-md-4 mb-3">
-
-                  <strong>
-
-                    Expiry Date:
-
-                  </strong>
-
-                  <p>
-
-                    {
-                      selectedMedicine.inventory.expiry_date
-                    }
-
-                  </p>
-
-                </div>
-
-
-                <div className="col-md-4 mb-3">
-
-                  <strong>
-
-                    Number of Units:
-
-                  </strong>
-
-                  <p>
-
-                    {
-                      selectedMedicine.inventory.number_of_units
-                    }
-
-                  </p>
-
-                </div>
-
-
-              </div>
-
-            ) : (
-
-              <div className="alert alert-warning">
-
-                No inventory details available
-                for this medicine.
-
-              </div>
-
-            )}
-
-
-          </div>
-
-        </div>
-
-      )}
-
-
-      {/* =================================
-          MEDICINE TABLE
-      ================================= */}
-
-      <div className="table-responsive">
-
-        <table className="table table-bordered table-hover">
-
-
-          <thead>
-
-            <tr>
-
-              <th>ID</th>
-
-              <th>Name</th>
-
-              <th>Generic Name</th>
-
-              <th>Dosage Form</th>
-
-              <th>Strength</th>
-
-              <th>Manufacturer</th>
-
-              <th>Price</th>
-
-              <th>Status</th>
-
-              <th>View</th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody>
-
-
-            {medicines.map(
-              (medicine) => (
-
-                <tr
-                  key={medicine.id}
-                >
-
-
-                  <td>
-
-                    {medicine.id}
-
-                  </td>
-
-
-                  <td>
-
-                    {medicine.name}
-
-                  </td>
-
-
-                  <td>
-
-                    {medicine.generic_name}
-
-                  </td>
-
-
-                  <td>
-
-                    {medicine.dosage_form}
-
-                  </td>
-
-
-                  <td>
-
-                    {medicine.strength}
-
-                  </td>
-
-
-                  <td>
-
-                    {medicine.manufacturer}
-
-                  </td>
-
-
-                  <td>
-
-                    ₹ {medicine.price}
-
-                  </td>
-
-
-                  <td>
-
-                    {
-                      medicine.is_active
-                        ? "Active"
-                        : "Inactive"
-                    }
-
-                  </td>
-
-
-                  {/* VIEW INVENTORY BUTTON */}
-
-                  <td>
-
-                    <button
-
-                      className="btn btn-sm text-white"
-
-                      style={{
-                        backgroundColor:
-                          "#1976A3",
-                      }}
-
-                      onClick={() =>
-
-                        handleViewInventory(
-                          medicine.id
-                        )
-
-                      }
-
-                    >
-
-                      View Inventory
-
-                    </button>
-
-                  </td>
-
+                  <th>
+                    Status
+                  </th>
 
                 </tr>
 
-              )
-            )}
+              </thead>
 
 
-          </tbody>
+              <tbody>
+
+                {medicines.length > 0 ? (
+
+                  medicines.map(
+                    (medicine) => (
+
+                      <tr
+                        key={medicine.id}
+                      >
+
+                        <td>
+
+                          {medicine.id}
+
+                        </td>
 
 
-        </table>
+                        <td>
+
+                          {medicine.name}
+
+                        </td>
+
+
+                        <td>
+
+                          {medicine.generic_name || "-"}
+
+                        </td>
+
+
+                        <td>
+
+                          {medicine.dosage_form || "-"}
+
+                        </td>
+
+
+                        <td>
+
+                          {medicine.strength || "-"}
+
+                        </td>
+
+
+                        <td>
+
+                          {medicine.manufacturer || "-"}
+
+                        </td>
+
+
+                        <td>
+
+                          ₹ {medicine.price}
+
+                        </td>
+
+
+                        <td>
+
+                          {medicine.is_active
+                            ? "Active"
+                            : "Inactive"}
+
+                        </td>
+
+                      </tr>
+
+                    )
+                  )
+
+                ) : (
+
+                  <tr>
+
+                    <td
+                      colSpan="8"
+                      className="text-center"
+                    >
+
+                      No medicines found.
+
+                    </td>
+
+                  </tr>
+
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
 
       </div>
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import api from "../../services/api";
 
 function PharmacyBills() {
+
   const [patientId, setPatientId] = useState("");
 
   const [prescriptions, setPrescriptions] =
@@ -23,9 +24,9 @@ function PharmacyBills() {
     useState(null);
 
 
-  // ===============================
+  // ==========================================
   // SEARCH PRESCRIPTIONS
-  // ===============================
+  // ==========================================
 
   const handleSearch = async () => {
 
@@ -35,7 +36,13 @@ function PharmacyBills() {
     setSelectedItems([]);
     setCreatedBill(null);
 
-    if (!patientId.trim()) {
+    const enteredPatientId =
+      patientId.trim();
+
+    // Patient ID is a STRING
+    // Example: PAT0001, PAT0002
+
+    if (!enteredPatientId) {
 
       setError(
         "Please enter a Patient ID."
@@ -53,9 +60,14 @@ function PharmacyBills() {
         {
           params: {
             patient_id:
-              patientId.trim(),
+              enteredPatientId,
           },
         }
+      );
+
+      console.log(
+        "Prescription response:",
+        response.data
       );
 
       setPrescriptions(
@@ -69,7 +81,6 @@ function PharmacyBills() {
         setMessage(
           "No prescriptions found for this patient."
         );
-
       }
 
     } catch (error) {
@@ -77,6 +88,11 @@ function PharmacyBills() {
       console.error(
         "Error searching prescriptions:",
         error
+      );
+
+      console.error(
+        "Backend response:",
+        error.response?.data
       );
 
       setError(
@@ -89,12 +105,13 @@ function PharmacyBills() {
       setLoading(false);
 
     }
+
   };
 
 
-  // ===============================
+  // ==========================================
   // SELECT PRESCRIPTION
-  // ===============================
+  // ==========================================
 
   const handleSelectPrescription =
     (prescription) => {
@@ -115,9 +132,12 @@ function PharmacyBills() {
         return;
       }
 
+      setMessage("");
+
       setSelectedItems(
         (prev) => [
           ...prev,
+
           {
             prescription:
               prescription.id,
@@ -125,49 +145,18 @@ function PharmacyBills() {
             medicine_name:
               prescription.medicine_name,
 
-            quantity: 1,
+            quantity:
+              prescription.quantity,
           },
         ]
       );
+
     };
 
 
-  // ===============================
-  // CHANGE QUANTITY
-  // ===============================
-
-  const handleQuantityChange =
-    (prescriptionId, value) => {
-
-      if (
-        value === "" ||
-        Number(value) < 1
-      ) {
-
-        value = 1;
-
-      }
-
-      setSelectedItems(
-        (prev) =>
-          prev.map(
-            (item) =>
-              item.prescription ===
-              prescriptionId
-                ? {
-                    ...item,
-                    quantity:
-                      Number(value),
-                  }
-                : item
-          )
-      );
-    };
-
-
-  // ===============================
+  // ==========================================
   // REMOVE MEDICINE
-  // ===============================
+  // ==========================================
 
   const handleRemove =
     (prescriptionId) => {
@@ -180,17 +169,40 @@ function PharmacyBills() {
               prescriptionId
           )
       );
+
     };
 
 
-  // ===============================
+  // ==========================================
   // CREATE PHARMACY BILL
-  // ===============================
+  // ==========================================
 
   const handleCreateBill = async () => {
 
     setError("");
     setMessage("");
+
+    const enteredPatientId =
+      patientId.trim();
+
+
+    // ======================================
+    // CHECK PATIENT ID
+    // ======================================
+
+    if (!enteredPatientId) {
+
+      setError(
+        "Patient ID is required."
+      );
+
+      return;
+    }
+
+
+    // ======================================
+    // CHECK SELECTED MEDICINES
+    // ======================================
 
     if (
       selectedItems.length === 0
@@ -208,23 +220,33 @@ function PharmacyBills() {
 
       setLoading(true);
 
+
+      // ======================================
+      // PATIENT ID IS A STRING
+      // ======================================
+
       const billData = {
 
         patient:
-          Number(patientId),
+          enteredPatientId,
 
         items:
           selectedItems.map(
             (item) => ({
+
               prescription:
                 item.prescription,
 
-              quantity:
-                Number(item.quantity),
             })
           ),
 
       };
+
+
+      console.log(
+        "Bill data being sent:",
+        billData
+      );
 
 
       const response = await api.post(
@@ -249,20 +271,150 @@ function PharmacyBills() {
       );
 
 
+      // Clear selected medicines
+
       setSelectedItems([]);
 
 
     } catch (error) {
 
       console.error(
-        "Error creating bill:",
+        "Error creating pharmacy bill:",
         error
+      );
+
+      console.error(
+        "Backend response:",
+        error.response?.data
+      );
+
+
+      if (
+        error.response?.data
+      ) {
+
+        const backendError =
+          error.response.data;
+
+
+        if (
+          typeof backendError ===
+          "object"
+        ) {
+
+          if (
+            backendError.patient
+          ) {
+
+            setError(
+              Array.isArray(
+                backendError.patient
+              )
+                ? backendError.patient.join(
+                    " "
+                  )
+                : backendError.patient
+            );
+
+          } else if (
+            backendError.detail
+          ) {
+
+            setError(
+              backendError.detail
+            );
+
+          } else {
+
+            setError(
+              "Failed to create pharmacy bill."
+            );
+
+          }
+
+        } else {
+
+          setError(
+            "Failed to create pharmacy bill."
+          );
+
+        }
+
+      } else {
+
+        setError(
+          "Failed to create pharmacy bill."
+        );
+
+      }
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+
+  // ==========================================
+  // PAY PHARMACY BILL
+  // ==========================================
+
+  const handlePayBill = async () => {
+
+    setError("");
+    setMessage("");
+
+    if (!createdBill) {
+
+      return;
+    }
+
+
+    try {
+
+      setLoading(true);
+
+
+      const response = await api.post(
+        `pharmacy/bills/${createdBill.id}/pay/`
+      );
+
+
+      console.log(
+        "Payment Response:",
+        response.data
+      );
+
+
+      setCreatedBill(
+        response.data.bill
+      );
+
+
+      setMessage(
+        response.data.message ||
+        "Payment successful. Medicines dispensed."
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "Error processing payment:",
+        error
+      );
+
+      console.error(
+        "Backend response:",
+        error.response?.data
       );
 
 
       setError(
         error.response?.data?.detail ||
-        "Failed to create pharmacy bill."
+        "Failed to process payment."
       );
 
 
@@ -271,91 +423,162 @@ function PharmacyBills() {
       setLoading(false);
 
     }
+
   };
 
-  // ===============================
-    // PAY PHARMACY BILL
-    // ===============================
 
-    const handlePayBill = async () => {
+  // ==========================================
+  // PRINT PHARMACY BILL
+  // ==========================================
 
-    setError("");
-    setMessage("");
+  const handlePrintBill = () => {
 
-    if (!createdBill) {
+    window.print();
 
-        return;
+  };
 
+
+  // ==========================================
+  // FORMAT DATE
+  // ==========================================
+
+  const formatDate = (dateValue) => {
+
+    if (!dateValue) {
+      return "-";
     }
 
-    try {
+    const date =
+      new Date(dateValue);
 
-        setLoading(true);
-
-        const response = await api.post(
-        `pharmacy/bills/${createdBill.id}/pay/`
-        );
-
-        console.log(
-        "Payment Response:",
-        response.data
-        );
-
-        setCreatedBill(
-        response.data.bill
-        );
-
-        setMessage(
-        response.data.message ||
-        "Payment successful. Medicines dispensed."
-        );
-
-    } catch (error) {
-
-        console.error(
-        "Error processing payment:",
-        error
-        );
-
-        setError(
-        error.response?.data?.detail ||
-        "Failed to process payment."
-        );
-
-    } finally {
-
-        setLoading(false);
-
+    if (Number.isNaN(date.getTime())) {
+      return "-";
     }
 
-    };
+    return date.toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }
+    );
 
+  };
+
+
+  // ==========================================
+  // PAGE
+  // ==========================================
 
   return (
 
     <div>
 
-      <h2 className="mb-4">
-        Pharmacy Bills
-      </h2>
+
+      {/* ======================================
+          PRINT CSS
+      ====================================== */}
+
+      <style>
+        {`
+          @media print {
+
+            body * {
+              visibility: hidden;
+            }
+
+            .print-bill,
+            .print-bill * {
+              visibility: visible;
+            }
+
+            .print-bill {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              padding: 20px;
+              margin: 0;
+              box-shadow: none !important;
+              border: none !important;
+            }
+
+            .no-print {
+              display: none !important;
+            }
+
+            .print-bill table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+
+            .print-bill th,
+            .print-bill td {
+              border: 1px solid #000 !important;
+              padding: 8px;
+            }
+
+            .print-bill-header {
+              text-align: center;
+              margin-bottom: 20px;
+            }
+
+            .print-bill-header h2 {
+              margin-bottom: 5px;
+            }
+
+            .print-total {
+              font-size: 18px;
+              font-weight: bold;
+            }
+
+            @page {
+              size: A4;
+              margin: 15mm;
+            }
+
+          }
+        `}
+      </style>
 
 
-      {/* ===============================
+      {/* ======================================
+          PAGE TITLE
+      ====================================== */}
+
+      <div className="no-print">
+
+        <h2 className="mb-4">
+
+          Pharmacy Bills
+
+        </h2>
+
+      </div>
+
+
+      {/* ======================================
           PATIENT SEARCH
-      =============================== */}
+      ====================================== */}
 
-      <div className="card shadow-sm mb-4">
+      <div className="card shadow-sm mb-4 no-print">
 
         <div className="card-body">
 
           <div className="row g-3">
 
 
+            {/* PATIENT ID */}
+
             <div className="col-md-6">
 
               <label className="form-label">
+
                 Patient ID
+
               </label>
+
 
               <input
                 type="text"
@@ -372,15 +595,20 @@ function PharmacyBills() {
             </div>
 
 
+            {/* SEARCH BUTTON */}
+
             <div className="col-md-6 d-flex align-items-end">
 
               <button
+                type="button"
                 className="btn text-white"
                 style={{
                   backgroundColor:
                     "#1976A3",
                 }}
-                onClick={handleSearch}
+                onClick={
+                  handleSearch
+                }
                 disabled={loading}
               >
 
@@ -398,13 +626,13 @@ function PharmacyBills() {
       </div>
 
 
-      {/* ===============================
-          ERROR
-      =============================== */}
+      {/* ======================================
+          ERROR MESSAGE
+      ====================================== */}
 
       {error && (
 
-        <div className="alert alert-danger">
+        <div className="alert alert-danger no-print">
 
           {error}
 
@@ -413,13 +641,13 @@ function PharmacyBills() {
       )}
 
 
-      {/* ===============================
-          MESSAGE
-      =============================== */}
+      {/* ======================================
+          SUCCESS / INFORMATION MESSAGE
+      ====================================== */}
 
       {message && (
 
-        <div className="alert alert-info">
+        <div className="alert alert-info no-print">
 
           {message}
 
@@ -428,150 +656,149 @@ function PharmacyBills() {
       )}
 
 
-      {/* ===============================
+      {/* ======================================
           CREATED BILL
-      =============================== */}
+      ====================================== */}
 
       {createdBill && (
 
-        <div className="card shadow-sm mb-4">
+        <div
+          className="card shadow-sm mb-4 print-bill"
+        >
 
-          <div className="card-header">
 
-            <strong>
-              Pharmacy Bill Created
-            </strong>
+          {/* =================================
+              PRINT BILL HEADER
+          ================================= */}
+
+          <div className="print-bill-header">
+
+            <h2>
+
+              PHARMACY BILL
+
+            </h2>
+
+            <p className="mb-0">
+
+              Pharmacy Department
+
+            </p>
+
+            <hr />
 
           </div>
 
 
           <div className="card-body">
 
-            <div className="row">
+
+            {/* =================================
+                BILL INFORMATION
+            ================================= */}
+
+            <div className="row mb-3">
 
 
-              <div className="col-md-6 mb-3">
+              {/* BILL NUMBER */}
+
+              <div className="col-md-6 mb-2">
 
                 <strong>
+
                   Bill Number:
+
                 </strong>
 
-                <p>
-                  {createdBill.bill_number || "-"}
-                </p>
+                <div>
 
-              </div>
-
-
-              <div className="col-md-6 mb-3">
-
-                <strong>
-                  Patient:
-                </strong>
-
-                <p>
-                  {createdBill.patient_name ||
-                    `Patient ID: ${patientId}`}
-                </p>
-
-              </div>
-
-
-              <div className="col-md-4 mb-3">
-
-                <strong>
-                  Subtotal:
-                </strong>
-
-                <p>
-                  ₹ {createdBill.subtotal}
-                </p>
-
-              </div>
-
-
-              <div className="col-md-4 mb-3">
-
-                <strong>
-                  GST:
-                </strong>
-
-                <p>
-                  ₹ {createdBill.gst_amount}
-                </p>
-
-              </div>
-
-
-              <div className="col-md-4 mb-3">
-
-                <strong>
-                  Total Amount:
-                </strong>
-
-                <p className="fw-bold fs-5">
-
-                  ₹ {createdBill.total_amount}
-
-                </p>
-
-              </div>
-
-
-              <div className="col-md-6 mb-3">
-
-                <strong>
-                    Payment Status:
-                </strong>
-
-                <p
-                    className={
-                    createdBill.payment_status === "PAID"
-                        ? "text-success fw-bold"
-                        : "text-warning fw-bold"
-                    }
-                >
-                    {createdBill.payment_status}
-                </p>
+                  {createdBill.bill_number ||
+                    "-"}
 
                 </div>
 
-                {createdBill.payment_status === "PENDING" && (
+              </div>
 
-                    <div className="col-12">
 
-                        <button
-                        className="btn text-white"
-                        style={{
-                            backgroundColor: "#1976A3",
-                        }}
-                        onClick={handlePayBill}
-                        disabled={loading}
-                        >
+              {/* BILL DATE */}
 
-                        Pay Now
+              <div className="col-md-6 mb-2">
 
-                        </button>
+                <strong>
 
-                    </div>
+                  Bill Date:
 
-                    )}
+                </strong>
+
+                <div>
+
+                  {formatDate(
+                    createdBill.issue_date ||
+                    createdBill.created_at
+                  )}
+
+                </div>
+
+              </div>
+
+
+              {/* PATIENT ID */}
+
+              <div className="col-md-6 mb-2">
+
+                <strong>
+
+                  Patient ID:
+
+                </strong>
+
+                <div>
+
+                  {createdBill.patient_id ||
+                    patientId ||
+                    "-"}
+
+                </div>
+
+              </div>
+
+
+              {/* PATIENT NAME */}
+
+              <div className="col-md-6 mb-2">
+
+                <strong>
+
+                  Patient:
+
+                </strong>
+
+                <div>
+
+                  {createdBill.patient_name ||
+                    `Patient ID: ${patientId}`}
+
+                </div>
+
+              </div>
 
 
             </div>
 
 
-            {/* ===============================
+            {/* =================================
                 BILL ITEMS
-            =============================== */}
+            ================================= */}
 
             {createdBill.items &&
               createdBill.items.length > 0 && (
 
                 <div className="mt-3">
 
-                  <h5>
+                  <h5 className="mb-3">
+
                     Bill Medicines
+
                   </h5>
 
 
@@ -579,24 +806,38 @@ function PharmacyBills() {
 
                     <table className="table table-bordered">
 
-                      <thead className="table-light">
+                      <thead>
 
                         <tr>
 
                           <th>
+
+                            S.No
+
+                          </th>
+
+                          <th>
+
                             Medicine
+
                           </th>
 
                           <th>
+
                             Quantity
+
                           </th>
 
                           <th>
-                            Price
+
+                            Unit Price
+
                           </th>
 
                           <th>
+
                             Total
+
                           </th>
 
                         </tr>
@@ -609,17 +850,30 @@ function PharmacyBills() {
                         {createdBill.items.map(
                           (item, index) => (
 
-                            <tr key={index}>
+                            <tr
+                              key={index}
+                            >
 
                               <td>
-                                {item.medicine_name ||
-                                  item.medicine ||
-                                  "-"}
+
+                                {index + 1}
+
                               </td>
 
 
                               <td>
+
+                                {item.medicine_name ||
+                                  item.medicine ||
+                                  "-"}
+
+                              </td>
+
+
+                              <td>
+
                                 {item.quantity}
+
                               </td>
 
 
@@ -628,7 +882,7 @@ function PharmacyBills() {
                                 ₹ {
                                   item.unit_price ||
                                   item.price ||
-                                  "-"
+                                  "0.00"
                                 }
 
                               </td>
@@ -637,9 +891,9 @@ function PharmacyBills() {
                               <td>
 
                                 ₹ {
-                                  item.total ||
                                   item.total_price ||
-                                  "-"
+                                  item.total ||
+                                  "0.00"
                                 }
 
                               </td>
@@ -659,6 +913,179 @@ function PharmacyBills() {
 
               )}
 
+
+            {/* =================================
+                BILL SUMMARY
+            ================================= */}
+
+            <div className="row justify-content-end mt-4">
+
+              <div className="col-md-5">
+
+
+                <div className="d-flex justify-content-between mb-2">
+
+                  <strong>
+
+                    Subtotal:
+
+                  </strong>
+
+                  <span>
+
+                    ₹ {createdBill.subtotal}
+
+                  </span>
+
+                </div>
+
+
+                <div className="d-flex justify-content-between mb-2">
+
+                  <strong>
+
+                    GST (5%):
+
+                  </strong>
+
+                  <span>
+
+                    ₹ {createdBill.gst_amount}
+
+                  </span>
+
+                </div>
+
+
+                <hr />
+
+
+                <div className="d-flex justify-content-between print-total">
+
+                  <strong>
+
+                    Total Amount:
+
+                  </strong>
+
+                  <span>
+
+                    ₹ {createdBill.total_amount}
+
+                  </span>
+
+                </div>
+
+
+              </div>
+
+            </div>
+
+
+            {/* =================================
+                PAYMENT STATUS
+            ================================= */}
+
+            <div className="mt-4">
+
+              <strong>
+
+                Payment Status:
+
+              </strong>
+
+
+              <span
+                className={
+                  createdBill.payment_status ===
+                  "PAID"
+                    ? "text-success fw-bold ms-2"
+                    : "text-warning fw-bold ms-2"
+                }
+              >
+
+                {createdBill.payment_status}
+
+              </span>
+
+            </div>
+
+
+            {/* =================================
+                PRINT FOOTER
+            ================================= */}
+
+            <div className="text-center mt-5">
+
+              <hr />
+
+              <p className="mb-1">
+
+                Thank you 
+
+              </p>
+
+              <p className="mb-0">
+
+                Please keep this bill for your records.
+
+              </p>
+
+            </div>
+
+
+            {/* =================================
+                ACTION BUTTONS
+            ================================= */}
+
+            <div className="mt-4 no-print">
+
+
+              {/* PAY BUTTON */}
+
+              {createdBill.payment_status ===
+                "PENDING" && (
+
+                <button
+                  type="button"
+                  className="btn text-white me-2"
+                  style={{
+                    backgroundColor:
+                      "#1976A3",
+                  }}
+                  onClick={
+                    handlePayBill
+                  }
+                  disabled={loading}
+                >
+
+                  {loading
+                    ? "Processing..."
+                    : "Pay Now"}
+
+                </button>
+
+              )}
+
+
+              {/* PRINT BUTTON */}
+
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={
+                  handlePrintBill
+                }
+              >
+
+                🖨 Print Bill
+
+              </button>
+
+
+            </div>
+
+
           </div>
 
         </div>
@@ -666,37 +1093,47 @@ function PharmacyBills() {
       )}
 
 
-      {/* ===============================
+      {/* ======================================
           LOADING
-      =============================== */}
+      ====================================== */}
 
       {loading && (
 
-        <div className="text-center mb-3">
+        <div className="text-center mb-3 no-print">
 
           <div
             className="spinner-border"
             role="status"
-          />
+          >
+
+            <span className="visually-hidden">
+
+              Loading...
+
+            </span>
+
+          </div>
 
         </div>
 
       )}
 
 
-      {/* ===============================
-          PRESCRIPTIONS
-      =============================== */}
+      {/* ======================================
+          AVAILABLE PRESCRIPTIONS
+      ====================================== */}
 
       {!loading &&
         prescriptions.length > 0 && (
 
-          <div className="card shadow-sm mb-4">
+          <div className="card shadow-sm mb-4 no-print">
 
             <div className="card-header">
 
               <strong>
+
                 Available Prescriptions
+
               </strong>
 
             </div>
@@ -713,27 +1150,45 @@ function PharmacyBills() {
                     <tr>
 
                       <th>
+
                         Prescription ID
+
                       </th>
 
                       <th>
+
                         Medicine
+
                       </th>
 
                       <th>
+
                         Dosage
+
                       </th>
 
                       <th>
+
                         Frequency
+
                       </th>
 
                       <th>
+
                         Duration
+
                       </th>
 
                       <th>
+
+                        Quantity
+
+                      </th>
+
+                      <th>
+
                         Action
+
                       </th>
 
                     </tr>
@@ -752,42 +1207,85 @@ function PharmacyBills() {
                           }
                         >
 
+
+                          {/* PRESCRIPTION ID */}
+
                           <td>
+
                             {prescription.id}
+
                           </td>
 
 
+                          {/* MEDICINE */}
+
                           <td>
+
                             {
                               prescription.medicine_name
                             }
+
                           </td>
 
 
+                          {/* DOSAGE */}
+
                           <td>
+
                             {
-                              prescription.dosage
+                              prescription.dosage ||
+                              prescription.medicine_dosage_form ||
+                              "-"
                             }
+
                           </td>
 
 
+                          {/* FREQUENCY */}
+
                           <td>
+
                             {
                               prescription.frequency
                             }
+
                           </td>
 
+
+                          {/* DURATION */}
 
                           <td>
+
                             {
                               prescription.duration
+                            }{" "}
+
+                            {
+                              prescription.duration_unit ||
+                              ""
                             }
+
                           </td>
 
+
+                          {/* QUANTITY */}
+
+                          <td>
+
+                            {
+                              prescription.quantity ??
+                              "-"
+                            }
+
+                          </td>
+
+
+                          {/* ACTION */}
 
                           <td>
 
                             <button
+                              type="button"
                               className="btn btn-sm text-white"
                               style={{
                                 backgroundColor:
@@ -824,19 +1322,20 @@ function PharmacyBills() {
         )}
 
 
-      {/* ===============================
+      {/* ======================================
           SELECTED MEDICINES
-      =============================== */}
+      ====================================== */}
 
       {selectedItems.length > 0 && (
 
-        <div className="card shadow-sm">
-
+        <div className="card shadow-sm no-print">
 
           <div className="card-header">
 
             <strong>
+
               Selected Medicines
+
             </strong>
 
           </div>
@@ -853,15 +1352,21 @@ function PharmacyBills() {
                   <tr>
 
                     <th>
+
                       Medicine
+
                     </th>
 
                     <th>
+
                       Quantity
+
                     </th>
 
                     <th>
+
                       Action
+
                     </th>
 
                   </tr>
@@ -880,6 +1385,8 @@ function PharmacyBills() {
                         }
                       >
 
+                        {/* MEDICINE */}
+
                         <td>
 
                           {
@@ -889,29 +1396,21 @@ function PharmacyBills() {
                         </td>
 
 
+                        {/* QUANTITY */}
+
                         <td>
 
-                          <input
-                            type="number"
-                            min="1"
-                            className="form-control"
-                            value={
-                              item.quantity
-                            }
-                            onChange={(e) =>
-                              handleQuantityChange(
-                                item.prescription,
-                                e.target.value
-                              )
-                            }
-                          />
+                          {item.quantity}
 
                         </td>
 
 
+                        {/* REMOVE */}
+
                         <td>
 
                           <button
+                            type="button"
                             className="btn btn-sm btn-danger"
                             onClick={() =>
                               handleRemove(
@@ -940,13 +1439,12 @@ function PharmacyBills() {
           </div>
 
 
-          {/* ===============================
-              CREATE PHARMACY BILL BUTTON
-          =============================== */}
+          {/* CREATE BILL */}
 
           <div className="p-3 text-end">
 
             <button
+              type="button"
               className="btn text-white"
               style={{
                 backgroundColor:
@@ -958,21 +1456,22 @@ function PharmacyBills() {
               disabled={loading}
             >
 
-              Create Pharmacy Bill
+              {loading
+                ? "Creating..."
+                : "Create Pharmacy Bill"}
 
             </button>
 
           </div>
 
-
         </div>
 
       )}
 
-
     </div>
 
   );
+
 }
 
 export default PharmacyBills;
