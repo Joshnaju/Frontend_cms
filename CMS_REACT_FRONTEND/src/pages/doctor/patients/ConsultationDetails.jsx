@@ -195,7 +195,7 @@ function ConsultationDetails() {
                         {!medicine.medicine && (
                           <div className="small text-warning-emphasis mt-1">
                             <i className="bi bi-exclamation-circle me-1"></i>
-                            Not available in pharmacy
+                            Not available in hospital pharmacy
                           </div>
                         )}
                       </td>
