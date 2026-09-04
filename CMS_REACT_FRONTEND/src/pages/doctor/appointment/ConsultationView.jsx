@@ -4,6 +4,7 @@ import {
   getAppointment,
   getConsultationByAppointment,
 } from "../../../services/doctorService";
+import { frequencyOptions } from "../../../constants/doctor/doctor";
 
 function ConsultationView() {
   const { appointmentId } = useParams();
@@ -323,9 +324,13 @@ function ConsultationView() {
               MEDICINES
           ================================================= */}
 
+          {/* =================================================
+    MEDICINES
+================================================= */}
+
           <div className="card mb-4">
-            <div className="card-header">
-              <h5 className="mb-0">
+            <div className="card-header bg-white">
+              <h5 className="mb-0 fw-semibold">
                 <i className="bi bi-prescription2 me-2 text-success-emphasis"></i>
                 Medicines
               </h5>
@@ -334,11 +339,12 @@ function ConsultationView() {
             <div className="card-body">
               {consultation?.medicine_prescriptions?.length > 0 ? (
                 <div className="table-responsive">
-                  <table className="table table-bordered align-middle mb-0">
+                  <table className="table table-bordered table-hover align-middle mb-0">
                     <thead className="table-light">
                       <tr>
                         <th>Medicine</th>
-                        <th>Dosage</th>
+                        <th>Strength</th>
+                        <th>Dosage Form</th>
                         <th>Frequency</th>
                         <th>Duration</th>
                         <th>Instructions</th>
@@ -347,19 +353,89 @@ function ConsultationView() {
 
                     <tbody>
                       {consultation.medicine_prescriptions.map(
-                        (medicine, index) => (
-                          <tr key={medicine.id || index}>
-                            <td>{medicine.medicine_name || "-"}</td>
+                        (medicine, index) => {
+                          const frequency = frequencyOptions.find(
+                            (option) => option.value === medicine.frequency,
+                          );
 
-                            <td>{medicine.dosage || "-"}</td>
+                          return (
+                            <tr key={medicine.id || index}>
+                              {/* Medicine */}
 
-                            <td>{medicine.frequency || "-"}</td>
+                              <td className="fw-semibold">
+                                {medicine.medicine_name || "-"}
 
-                            <td>{medicine.duration || "-"}</td>
+                                {!medicine.medicine && (
+                                  <div className="small text-warning-emphasis mt-1">
+                                    <i className="bi bi-exclamation-circle me-1"></i>
+                                    Not available in pharmacy
+                                  </div>
+                                )}
+                              </td>
 
-                            <td>{medicine.instructions || "-"}</td>
-                          </tr>
-                        ),
+                              {/* Strength */}
+
+                              <td>
+                                {medicine.medicine_strength
+                                  ? `${medicine.medicine_strength}${
+                                      medicine.medicine_strength_unit
+                                        ? ` ${medicine.medicine_strength_unit}`
+                                        : ""
+                                    }`
+                                  : "-"}
+                              </td>
+
+                              {/* Dosage Form */}
+
+                              <td>{medicine.medicine_dosage_form || "-"}</td>
+
+                              {/* Frequency */}
+
+                              <td>
+                                {frequency ? (
+                                  <>
+                                    <div className="fw-semibold">
+                                      {frequency.label}
+                                    </div>
+
+                                    <div className="small text-muted">
+                                      {frequency.timing}
+                                    </div>
+                                  </>
+                                ) : (
+                                  medicine.frequency || "-"
+                                )}
+                              </td>
+
+                              {/* Duration */}
+
+                              <td>
+                                {medicine.duration ? (
+                                  <>
+                                    <span className="fw-semibold">
+                                      {medicine.duration}
+                                    </span>{" "}
+                                    <span className="text-muted">
+                                      {medicine.duration_unit === "DAYS"
+                                        ? "Days"
+                                        : medicine.duration_unit === "WEEKS"
+                                          ? "Weeks"
+                                          : medicine.duration_unit === "MONTHS"
+                                            ? "Months"
+                                            : medicine.duration_unit || ""}
+                                    </span>
+                                  </>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
+
+                              {/* Instructions */}
+
+                              <td>{medicine.instructions || "-"}</td>
+                            </tr>
+                          );
+                        },
                       )}
                     </tbody>
                   </table>
@@ -600,6 +676,9 @@ function ConsultationView() {
                       )}
 
                       {/* ==================== MEDICINES ==================== */}
+                      {/* @@@@@@@@@@@@@@@ */}
+                      {/* ==================== MEDICINES ==================== */}
+
                       <div className="mt-4">
                         <h6 className="fw-semibold mb-3">
                           <i className="bi bi-prescription2 me-2 text-primary-emphasis"></i>
@@ -612,34 +691,131 @@ function ConsultationView() {
                           </p>
                         ) : (
                           <div className="table-responsive">
-                            <table className="table table-bordered align-middle">
+                            <table className="table table-bordered table-hover align-middle mb-0">
                               <thead className="table-light">
                                 <tr>
                                   <th>Medicine</th>
-                                  <th>Dosage</th>
+                                  <th>Strength</th>
+                                  <th>Dosage Form</th>
                                   <th>Frequency</th>
                                   <th>Duration</th>
+                                  {/* <th>Quantity</th> */}
                                   <th>Instructions</th>
                                 </tr>
                               </thead>
 
                               <tbody>
-                                {(history.medicine_prescriptions || []).map(
-                                  (medicine) => (
-                                    <tr key={medicine.id}>
-                                      <td className="fw-semibold">
-                                        {medicine.medicine_name || "-"}
-                                      </td>
+                                {history.medicine_prescriptions.map(
+                                  (medicine, index) => {
+                                    const frequency = frequencyOptions.find(
+                                      (option) =>
+                                        option.value === medicine.frequency,
+                                    );
 
-                                      <td>{medicine.dosage || "-"}</td>
+                                    return (
+                                      <tr key={medicine.id || index}>
+                                        {/* =========================
+                      MEDICINE NAME
+                  ========================== */}
 
-                                      <td>{medicine.frequency || "-"}</td>
+                                        <td className="fw-semibold">
+                                          {medicine.medicine_name || "-"}
 
-                                      <td>{medicine.duration || "-"}</td>
+                                          {!medicine.medicine && (
+                                            <div className="small text-warning-emphasis mt-1">
+                                              <i className="bi bi-exclamation-circle me-1"></i>
+                                              Not available in pharmacy
+                                            </div>
+                                          )}
+                                        </td>
 
-                                      <td>{medicine.instructions || "-"}</td>
-                                    </tr>
-                                  ),
+                                        {/* =========================
+                      STRENGTH
+                  ========================== */}
+
+                                        <td>
+                                          {medicine.medicine_strength
+                                            ? `${medicine.medicine_strength}${
+                                                medicine.medicine_strength_unit
+                                                  ? ` ${medicine.medicine_strength_unit}`
+                                                  : ""
+                                              }`
+                                            : "-"}
+                                        </td>
+
+                                        {/* =========================
+                      DOSAGE FORM
+                  ========================== */}
+
+                                        <td>
+                                          {medicine.medicine_dosage_form || "-"}
+                                        </td>
+
+                                        {/* =========================
+                      FREQUENCY
+                  ========================== */}
+
+                                        <td>
+                                          {frequency ? (
+                                            <>
+                                              <div className="fw-semibold">
+                                                {frequency.label}
+                                              </div>
+
+                                              <div className="small text-muted">
+                                                {frequency.timing}
+                                              </div>
+                                            </>
+                                          ) : (
+                                            medicine.frequency || "-"
+                                          )}
+                                        </td>
+
+                                        {/* =========================
+                      DURATION
+                  ========================== */}
+
+                                        <td>
+                                          {medicine.duration ? (
+                                            <>
+                                              <span className="fw-semibold">
+                                                {medicine.duration}
+                                              </span>{" "}
+                                              <span className="text-muted">
+                                                {medicine.duration_unit ===
+                                                "DAYS"
+                                                  ? "Days"
+                                                  : medicine.duration_unit ===
+                                                      "WEEKS"
+                                                    ? "Weeks"
+                                                    : medicine.duration_unit ===
+                                                        "MONTHS"
+                                                      ? "Months"
+                                                      : medicine.duration_unit ||
+                                                        ""}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            "-"
+                                          )}
+                                        </td>
+
+                                        {/* =========================
+                      QUANTITY
+                  ========================== */}
+
+                                        {/* <td className="fw-semibold text-center">
+                                          {medicine.quantity ?? "-"}
+                                        </td> */}
+
+                                        {/* =========================
+                      INSTRUCTIONS
+                  ========================== */}
+
+                                        <td>{medicine.instructions || "-"}</td>
+                                      </tr>
+                                    );
+                                  },
                                 )}
                               </tbody>
                             </table>
