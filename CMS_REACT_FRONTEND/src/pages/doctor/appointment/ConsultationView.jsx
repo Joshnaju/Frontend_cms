@@ -850,6 +850,13 @@ function ConsultationView() {
                                   <tr key={lab.id}>
                                     <td className="fw-semibold">
                                       {lab.lab_test_name || "-"}
+
+                                      {!lab.lab_test && (
+                                        <div className="small text-warning-emphasis mt-1">
+                                          <i className="bi bi-exclamation-circle me-1"></i>
+                                          Not available in hospital lab
+                                        </div>
+                                      )}
                                     </td>
 
                                     <td>{lab.instructions || "-"}</td>

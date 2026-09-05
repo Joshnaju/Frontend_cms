@@ -779,6 +779,12 @@ function Consultation() {
 
                                       <td className="fw-semibold">
                                         {medicine.medicine_name || "-"}
+                                        {!medicine.medicine && (
+                                          <div className="small text-warning-emphasis mt-1">
+                                            <i className="bi bi-exclamation-circle me-1"></i>
+                                            Not available in pharmacy
+                                          </div>
+                                        )}
                                       </td>
 
                                       {/* STRENGTH */}
@@ -860,6 +866,12 @@ function Consultation() {
                                   <tr key={lab.id}>
                                     <td className="fw-semibold">
                                       {lab.lab_test_name || "-"}
+                                      {!lab.lab_test && (
+                                        <div className="small text-warning-emphasis mt-1">
+                                          <i className="bi bi-exclamation-circle me-1"></i>
+                                          Not available in hospital lab
+                                        </div>
+                                      )}
                                     </td>
 
                                     <td>{lab.instructions || "-"}</td>
