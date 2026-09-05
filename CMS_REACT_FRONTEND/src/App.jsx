@@ -8,6 +8,8 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import DoctorRoutes from "./routes/DoctorRoutes";
 import ReceptionistRoutes from "./routes/ReceptionistRoutes";
+import PharmacistRoutes from "./routes/PharmacistRoutes";
+import MedicineInventory from "./pages/pharmacist/MedicineInventory";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -63,10 +65,21 @@ function App() {
         />
 
         {/* =========================
-            404
+            PHARMACIST MODULE
         ========================== */}
+        <Route
+          path="/pharmacist/*"
+          element={
+            <ProtectedRoute>
+              <PharmacistRoutes />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="*" element={<NotFound />} />
+        <Route
+          path="/medicine-inventory"
+          element={<MedicineInventory />}
+        />
       </Routes>
     </BrowserRouter>
   );
